@@ -1,0 +1,147 @@
+from typing import Annotated
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Query
+
+from app.core.deps import CurrentUser, DbSession, get_client_ip
+from app.core.exceptions import NotFoundError
+from app.core.responses import APIResponse
+from app.models.cashback import CashbackAccrualStatus
+from app.repositories.card import CardRepository, CashbackRuleRepository
+from app.repositories.cashback import CashbackAccrualRepository
+from app.schemas.cashback import (
+    CardCreate,
+    CardResponse,
+    CashbackAccrualResponse,
+    CashbackRecommendation,
+    CashbackRuleCreate,
+    CashbackRuleResponse,
+    CashbackSummaryResponse,
+)
+from app.services.cashback import CashbackService
+
+router = APIRouter()
+
+
+@router.post("/cards", response_model=APIResponse[CardResponse])
+async def create_card(
+    data: CardCreate,
+    user: CurrentUser,
+    db: DbSession,
+    ip: Annotated[str | None, Depends(get_client_ip)] = None,
+) -> APIResponse[CardResponse]:
+    service = CashbackService(db)
+    card = await service.create_card(user.id, data, ip=ip)
+    return APIResponse(
+        data=CardResponse(
+            id=str(card.id),
+            user_id=str(card.user_id),
+            account_id=str(card.account_id),
+            name=card.name,
+            bank_name=card.bank_name,
+            last_digits=card.last_digits,
+        )
+    )
+
+
+@router.get("/cards", response_model=APIResponse[list[CardResponse]])
+async def list_cards(user: CurrentUser, db: DbSession) -> APIResponse[list[CardResponse]]:
+    repo = CardRepository(db)
+    cards = await repo.list_by_user(user.id)
+    return APIResponse(
+        data=[
+            CardResponse(
+                id=str(c.id),
+                user_id=str(c.user_id),
+                account_id=str(c.account_id),
+                name=c.name,
+                bank_name=c.bank_name,
+                last_digits=c.last_digits,
+            )
+            for c in cards
+        ]
+    )
+
+
+@router.post("/cards/{card_id}/rules", response_model=APIResponse[CashbackRuleResponse])
+async def create_rule(
+    card_id: UUID,
+    data: CashbackRuleCreate,
+    user: CurrentUser,
+    db: DbSession,
+    ip: Annotated[str | None, Depends(get_client_ip)] = None,
+) -> APIResponse[CashbackRuleResponse]:
+    service = CashbackService(db)
+    rule = await service.create_rule(user.id, card_id, data, ip=ip)
+    return APIResponse(
+        data=CashbackRuleResponse(
+            id=str(rule.id),
+            card_id=str(rule.card_id),
+            category_id=str(rule.category_id),
+            cashback_percent=rule.cashback_percent,
+            monthly_limit=rule.monthly_limit,
+            start_date=rule.start_date,
+            end_date=rule.end_date,
+        )
+    )
+
+
+@router.get("/cards/{card_id}/rules", response_model=APIResponse[list[CashbackRuleResponse]])
+async def list_rules(card_id: UUID, user: CurrentUser, db: DbSession) -> APIResponse:
+    card_repo = CardRepository(db)
+    card = await card_repo.get_by_id_for_user(card_id, user.id)
+    if card is None:
+        raise NotFoundError("Card not found")
+    rule_repo = CashbackRuleRepository(db)
+    rules = await rule_repo.list_for_card(card_id)
+    return APIResponse(
+        data=[
+            CashbackRuleResponse(
+                id=str(r.id),
+                card_id=str(r.card_id),
+                category_id=str(r.category_id),
+                cashback_percent=r.cashback_percent,
+                monthly_limit=r.monthly_limit,
+                start_date=r.start_date,
+                end_date=r.end_date,
+            )
+            for r in rules
+        ]
+    )
+
+
+@router.get("/summary", response_model=APIResponse[CashbackSummaryResponse])
+async def cashback_summary(
+    user: CurrentUser, db: DbSession, period_month: str | None = None
+) -> APIResponse[CashbackSummaryResponse]:
+    repo = CashbackAccrualRepository(db)
+    total = await repo.total_earned(user.id, period_month)
+    return APIResponse(data=CashbackSummaryResponse(total_earned=total, period_month=period_month))
+
+
+@router.get("/missed", response_model=APIResponse[list[CashbackAccrualResponse]])
+async def missed_cashback(user: CurrentUser, db: DbSession) -> APIResponse:
+    repo = CashbackAccrualRepository(db)
+    accruals = await repo.list_by_user(user.id, status=CashbackAccrualStatus.MISSED)
+    return APIResponse(
+        data=[
+            CashbackAccrualResponse(
+                id=str(a.id),
+                transaction_id=str(a.transaction_id),
+                card_id=str(a.card_id),
+                amount=a.amount,
+                period_month=a.period_month,
+                status=a.status,
+            )
+            for a in accruals
+        ]
+    )
+
+
+@router.get("/recommendations", response_model=APIResponse[list[CashbackRecommendation]])
+async def recommendations(
+    user: CurrentUser, db: DbSession, category_id: UUID = Query(...)
+) -> APIResponse[list[CashbackRecommendation]]:
+    service = CashbackService(db)
+    recs = await service.get_recommendations(user.id, category_id)
+    return APIResponse(data=recs)

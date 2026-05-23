@@ -1,0 +1,202 @@
+from datetime import date, timedelta
+from decimal import Decimal
+from uuid import UUID
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.category import Category
+from app.models.transaction import Transaction, TransactionType
+from app.repositories.account import AccountRepository
+from app.repositories.cashback import CashbackAccrualRepository
+from app.repositories.category import CategoryRepository
+from app.repositories.goal import GoalRepository
+from app.repositories.ledger import LedgerRepository
+from app.schemas.analytics import (
+    CategoryStat,
+    DashboardResponse,
+    HeatmapDay,
+    HeatmapResponse,
+    RatiosResponse,
+    StatisticsResponse,
+)
+
+
+class AnalyticsService:
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+        self.account_repo = AccountRepository(session)
+        self.ledger_repo = LedgerRepository(session)
+        self.category_repo = CategoryRepository(session)
+        self.cashback_repo = CashbackAccrualRepository(session)
+        self.goal_repo = GoalRepository(session)
+
+    async def dashboard(self, user_id: UUID) -> DashboardResponse:
+        accounts = await self.account_repo.list_by_user(user_id)
+        total_balance = Decimal("0")
+        for acc in accounts:
+            balance = await self.ledger_repo.get_account_balance(acc.id, acc.initial_balance)
+            total_balance += balance
+        today = date.today()
+        month_start = today.replace(day=1)
+        income, expenses = await self._sum_income_expenses(user_id, month_start, today)
+        savings_rate = float((income - expenses) / income * 100) if income > 0 else 0.0
+        cashback = await self.cashback_repo.total_earned(user_id)
+        goals = await self.goal_repo.list_by_user(user_id)
+        goals_progress = [
+            {
+                "goal_id": str(goal.id),
+                "name": goal.name,
+                "progress_percent": (
+                    float(goal.current_amount / goal.target_amount * 100)
+                    if goal.target_amount > 0
+                    else 0.0
+                ),
+            }
+            for goal in goals
+        ]
+        return DashboardResponse(
+            total_balance=total_balance,
+            total_income=income,
+            total_expenses=expenses,
+            savings_rate=savings_rate,
+            cashback_earned=cashback,
+            goals_progress=goals_progress,
+        )
+
+    async def statistics(
+        self, user_id: UUID, date_from: date | None = None, date_to: date | None = None
+    ) -> StatisticsResponse:
+        date_to = date_to or date.today()
+        date_from = date_from or date_to - timedelta(days=30)
+        top_expense = await self._top_categories(
+            user_id, date_from, date_to, TransactionType.EXPENSE
+        )
+        top_income = await self._top_categories(user_id, date_from, date_to, TransactionType.INCOME)
+        income, expenses = await self._sum_income_expenses(user_id, date_from, date_to)
+        days = (date_to - date_from).days + 1
+        months = max(days / 30, 1)
+        return StatisticsResponse(
+            top_expense_categories=top_expense,
+            top_income_categories=top_income,
+            cashflow=income - expenses,
+            average_daily_spending=expenses / days if days else Decimal("0"),
+            average_monthly_income=income / Decimal(str(months)),
+        )
+
+    async def heatmap(
+        self, user_id: UUID, date_from: date | None = None, date_to: date | None = None
+    ) -> HeatmapResponse:
+        date_to = date_to or date.today()
+        date_from = date_from or date_to - timedelta(days=365)
+        result = await self.session.execute(
+            select(
+                Transaction.transaction_date,
+                func.count(Transaction.id),
+                func.coalesce(func.sum(Transaction.amount), 0),
+            )
+            .where(
+                Transaction.user_id == user_id,
+                Transaction.deleted_at.is_(None),
+                Transaction.transaction_date >= date_from,
+                Transaction.transaction_date <= date_to,
+            )
+            .group_by(Transaction.transaction_date)
+            .order_by(Transaction.transaction_date)
+        )
+        rows = result.all()
+        max_amount = max((Decimal(str(r[2])) for r in rows), default=Decimal("1"))
+        days = [
+            HeatmapDay(
+                date=r[0].isoformat(),
+                count=r[1],
+                total_amount=Decimal(str(r[2])),
+                intensity=float(Decimal(str(r[2])) / max_amount) if max_amount else 0.0,
+            )
+            for r in rows
+        ]
+        return HeatmapResponse(days=days)
+
+    async def ratios(self, user_id: UUID) -> RatiosResponse:
+        today = date.today()
+        month_start = today.replace(day=1)
+        income, expenses = await self._sum_income_expenses(user_id, month_start, today)
+        savings_rate = float((income - expenses) / income) if income > 0 else 0.0
+        expense_ratio = float(expenses / income) if income > 0 else 0.0
+        discretionary = await self._discretionary_expenses(user_id, month_start, today)
+        discretionary_ratio = float(discretionary / income) if income > 0 else 0.0
+        return RatiosResponse(
+            savings_rate=savings_rate,
+            expense_to_income_ratio=expense_ratio,
+            discretionary_spending_ratio=discretionary_ratio,
+        )
+
+    async def _sum_income_expenses(
+        self, user_id: UUID, date_from: date, date_to: date
+    ) -> tuple[Decimal, Decimal]:
+        result = await self.session.execute(
+            select(Transaction.type, func.coalesce(func.sum(Transaction.amount), 0))
+            .where(
+                Transaction.user_id == user_id,
+                Transaction.deleted_at.is_(None),
+                Transaction.transaction_date >= date_from,
+                Transaction.transaction_date <= date_to,
+                Transaction.type.in_([TransactionType.INCOME, TransactionType.EXPENSE]),
+            )
+            .group_by(Transaction.type)
+        )
+        income = Decimal("0")
+        expenses = Decimal("0")
+        for tx_type, total in result.all():
+            if tx_type == TransactionType.INCOME:
+                income = Decimal(str(total))
+            else:
+                expenses = Decimal(str(total))
+        return (income, expenses)
+
+    async def _top_categories(
+        self,
+        user_id: UUID,
+        date_from: date,
+        date_to: date,
+        tx_type: TransactionType,
+        limit: int = 10,
+    ) -> list[CategoryStat]:
+        result = await self.session.execute(
+            select(Category.id, Category.name, func.coalesce(func.sum(Transaction.amount), 0))
+            .join(Transaction, Transaction.category_id == Category.id)
+            .where(
+                Transaction.user_id == user_id,
+                Transaction.type == tx_type,
+                Transaction.deleted_at.is_(None),
+                Transaction.transaction_date >= date_from,
+                Transaction.transaction_date <= date_to,
+                Category.deleted_at.is_(None),
+            )
+            .group_by(Category.id, Category.name)
+            .order_by(func.sum(Transaction.amount).desc())
+            .limit(limit)
+        )
+        return [
+            CategoryStat(category_id=str(row[0]), category_name=row[1], total=Decimal(str(row[2])))
+            for row in result.all()
+        ]
+
+    async def _discretionary_expenses(
+        self, user_id: UUID, date_from: date, date_to: date
+    ) -> Decimal:
+        result = await self.session.execute(
+            select(func.coalesce(func.sum(Transaction.amount), 0))
+            .join(Category, Transaction.category_id == Category.id)
+            .where(
+                Transaction.user_id == user_id,
+                Transaction.type == TransactionType.EXPENSE,
+                Transaction.deleted_at.is_(None),
+                Transaction.transaction_date >= date_from,
+                Transaction.transaction_date <= date_to,
+                Category.is_essential.is_(False),
+                Category.deleted_at.is_(None),
+            )
+        )
+        return Decimal(str(result.scalar_one()))
