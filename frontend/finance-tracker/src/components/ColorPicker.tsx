@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { HexColorPicker } from 'react-colorful'
 import { Check, X } from 'lucide-react'
+import { useAnchoredPopover } from '@/hooks/useAnchoredPopover'
 
 const PRESETS = [
   '#7c5cff', '#9a82ff', '#a78bfa', '#38bdf8', '#22d3ee', '#06b6d4',
@@ -8,6 +10,9 @@ const PRESETS = [
   '#fb923c', '#f97316', '#ef4761', '#e11d48', '#ec4899', '#d946ef',
   '#8b5cf6', '#64748b', '#94a3b8', '#0ea5e9', '#14b8a6', '#dc2626',
 ]
+
+const POPOVER_WIDTH = 248
+const POPOVER_HEIGHT = 320
 
 type Props = {
   value: string | null | undefined
@@ -23,7 +28,16 @@ function isValidHex(s: string): boolean {
 export function ColorPicker({ value, onChange, label, allowEmpty = true }: Props) {
   const [open, setOpen] = useState(false)
   const [hexInput, setHexInput] = useState(value ?? '')
-  const ref = useRef<HTMLDivElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const anchorRef = useRef<HTMLButtonElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
+
+  const popoverStyle = useAnchoredPopover({
+    open,
+    anchorRef,
+    popoverWidth: POPOVER_WIDTH,
+    popoverHeight: POPOVER_HEIGHT,
+  })
 
   useEffect(() => {
     setHexInput(value ?? '')
@@ -31,7 +45,14 @@ export function ColorPicker({ value, onChange, label, allowEmpty = true }: Props
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      if (
+        rootRef.current?.contains(target) ||
+        popoverRef.current?.contains(target)
+      ) {
+        return
+      }
+      setOpen(false)
     }
     if (open) document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
@@ -39,44 +60,14 @@ export function ColorPicker({ value, onChange, label, allowEmpty = true }: Props
 
   const current = value && isValidHex(value) ? value : '#7c5cff'
 
-  return (
-    <div className="field" ref={ref} style={{ position: 'relative' }}>
-      {label && <label>{label}</label>}
-      <div className="row" style={{ gap: 10, alignItems: 'center' }}>
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="color-trigger"
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 10,
-            background: value || 'transparent',
-            border: '1px solid var(--border-strong)',
-            cursor: 'pointer',
-            backgroundImage: !value
-              ? 'repeating-conic-gradient(rgba(120,134,200,0.2) 0% 25%, transparent 0% 50%) 50% / 12px 12px'
-              : undefined,
-          }}
-          aria-label="Выбрать цвет"
-        />
-        <div className="muted mono" style={{ fontSize: 13 }}>
-          {value || 'не задан'}
-        </div>
-        {allowEmpty && value && (
-          <button
-            type="button"
-            className="btn btn-ghost btn-icon btn-sm"
-            onClick={() => onChange(null)}
-            title="Очистить"
-          >
-            <X size={14} />
-          </button>
-        )}
-      </div>
-
-      {open && (
-        <div className="color-popover">
+  const popover = open
+    ? createPortal(
+        <div
+          ref={popoverRef}
+          className="color-popover color-popover--floating"
+          style={popoverStyle}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           <HexColorPicker color={current} onChange={(c) => onChange(c)} />
 
           <div className="color-presets">
@@ -110,8 +101,49 @@ export function ColorPicker({ value, onChange, label, allowEmpty = true }: Props
               Готово
             </button>
           </div>
+        </div>,
+        document.body,
+      )
+    : null
+
+  return (
+    <div className="field" ref={rootRef}>
+      {label && <label>{label}</label>}
+      <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+        <button
+          ref={anchorRef}
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="color-trigger"
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 10,
+            background: value || 'transparent',
+            border: '1px solid var(--border-strong)',
+            cursor: 'pointer',
+            backgroundImage: !value
+              ? 'repeating-conic-gradient(rgba(120,134,200,0.2) 0% 25%, transparent 0% 50%) 50% / 12px 12px'
+              : undefined,
+          }}
+          aria-label="Выбрать цвет"
+          aria-expanded={open}
+        />
+        <div className="muted mono" style={{ fontSize: 13 }}>
+          {value || 'не задан'}
         </div>
-      )}
+        {allowEmpty && value && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon btn-sm"
+            onClick={() => onChange(null)}
+            title="Очистить"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {popover}
     </div>
   )
 }

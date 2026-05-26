@@ -9,7 +9,7 @@ type Props = {
   title: string
   subtitle?: string
   children: ReactNode
-  size?: 'md' | 'lg'
+  size?: 'md' | 'lg' | 'xl'
 }
 
 export function Modal({ open, onClose, title, subtitle, children, size = 'md' }: Props) {
@@ -27,7 +27,7 @@ export function Modal({ open, onClose, title, subtitle, children, size = 'md' }:
   return createPortal(
     <div className="modal-overlay" onMouseDown={onClose}>
       <div
-        className={`modal ${size === 'lg' ? 'modal-lg' : ''}`}
+        className={`modal ${size === 'lg' ? 'modal-lg' : ''} ${size === 'xl' ? 'modal-xl' : ''}`}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="row-between" style={{ marginBottom: 4 }}>

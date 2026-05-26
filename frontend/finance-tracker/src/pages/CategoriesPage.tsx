@@ -321,6 +321,7 @@ function CategoryFormModal({
       open={open}
       onClose={onClose}
       title={editing ? 'Редактировать категорию' : 'Новая категория'}
+      size="lg"
     >
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="field">
