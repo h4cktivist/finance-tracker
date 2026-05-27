@@ -80,6 +80,7 @@ async def create_rule(
             category_id=str(rule.category_id),
             cashback_percent=rule.cashback_percent,
             monthly_limit=rule.monthly_limit,
+            min_purchase_amount=rule.min_purchase_amount,
             start_date=rule.start_date,
             end_date=rule.end_date,
         )
@@ -102,6 +103,7 @@ async def list_rules(card_id: UUID, user: CurrentUser, db: DbSession) -> APIResp
                 category_id=str(r.category_id),
                 cashback_percent=r.cashback_percent,
                 monthly_limit=r.monthly_limit,
+                min_purchase_amount=r.min_purchase_amount,
                 start_date=r.start_date,
                 end_date=r.end_date,
             )

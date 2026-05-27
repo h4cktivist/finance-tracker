@@ -30,6 +30,7 @@ class CashbackRule(Base, UUIDPrimaryKeyMixin):
     )
     cashback_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
     monthly_limit: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    min_purchase_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     card: Mapped["Card"] = relationship(back_populates="cashback_rules")

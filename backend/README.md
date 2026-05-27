@@ -399,7 +399,7 @@ Authorization: Bearer <access_token>
 | GET | `/missed` | Упущенный кэшбэк |
 | GET | `/recommendations` | Лучшая карта для категории |
 
-Кэшбэк начисляется автоматически при создании `expense` с указанным `category_id`.
+Кэшбэк начисляется автоматически при создании `expense` с указанным `category_id` и подходящей картой; учитывается опциональный **минимум суммы покупки** в правиле (ниже порога начисления нет).
 
 #### POST `/cards`
 
@@ -418,6 +418,7 @@ Authorization: Bearer <access_token>
 | `cashback_percent` | decimal | да | Процент, 0–100 |
 | `start_date` | date | да | Начало действия правила |
 | `monthly_limit` | decimal | нет | Лимит кэшбэка в месяц (> 0) |
+| `min_purchase_amount` | decimal | нет | Минимальная сумма операции для начисления (> 0); без поля — на любую сумму |
 | `end_date` | date | нет | Конец действия |
 
 #### GET `/summary` — query
@@ -431,6 +432,8 @@ Authorization: Bearer <access_token>
 | Параметр | Тип | Обязательно | Описание |
 |----------|-----|-------------|----------|
 | `category_id` | UUID | да | Категория покупки |
+
+Ответ содержит `best_card_*`, `cashback_percent` и при наличии порога — `min_purchase_amount`.
 
 ---
 

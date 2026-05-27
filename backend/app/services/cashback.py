@@ -59,6 +59,7 @@ class CashbackService:
             category_id=category.id,
             cashback_percent=data.cashback_percent,
             monthly_limit=data.monthly_limit,
+            min_purchase_amount=data.min_purchase_amount,
             start_date=data.start_date,
             end_date=data.end_date,
         )
@@ -86,6 +87,9 @@ class CashbackService:
         best: tuple[CashbackRule, Card, Decimal] | None = None
         seen_missed_cards: set[UUID] = set()
         for rule, card in rules:
+            min_amt = rule.min_purchase_amount
+            if min_amt is not None and transaction.amount < min_amt:
+                continue
             potential = transaction.amount * rule.cashback_percent / Decimal("100")
             monthly_used = await self.accrual_repo.monthly_total_for_card_category(
                 card.id, category_id, period_month
@@ -156,5 +160,6 @@ class CashbackService:
                 best_card_id=str(best_card.id),
                 best_card_name=best_card.name,
                 cashback_percent=best_rule.cashback_percent,
+                min_purchase_amount=best_rule.min_purchase_amount,
             )
         ]

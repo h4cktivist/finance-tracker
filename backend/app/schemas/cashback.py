@@ -27,6 +27,11 @@ class CashbackRuleCreate(BaseModel):
     category_id: str
     cashback_percent: Decimal = Field(gt=0, le=100)
     monthly_limit: Decimal | None = Field(default=None, gt=0)
+    min_purchase_amount: Decimal | None = Field(
+        default=None,
+        gt=0,
+        description="Минимальная сумма покупки для начисления; None — без порога.",
+    )
     start_date: date
     end_date: date | None = None
 
@@ -37,6 +42,7 @@ class CashbackRuleResponse(BaseModel):
     category_id: str
     cashback_percent: Decimal
     monthly_limit: Decimal | None
+    min_purchase_amount: Decimal | None
     start_date: date
     end_date: date | None
     model_config = {"from_attributes": True}
@@ -52,6 +58,7 @@ class CashbackRecommendation(BaseModel):
     best_card_id: str
     best_card_name: str
     cashback_percent: Decimal
+    min_purchase_amount: Decimal | None = None
 
 
 class CashbackAccrualResponse(BaseModel):
