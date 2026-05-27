@@ -245,7 +245,9 @@ function TreeRow({
             node.color && <span className="color-swatch" style={{ background: node.color }} />
           )}
           <span style={{ fontWeight: depth === 0 ? 500 : 400 }}>{node.name}</span>
-          {!node.is_essential && <span className="badge badge-muted">не обязат.</span>}
+          {!node.is_essential && (
+            <span className="badge badge-muted category-nonessential-badge">не обязат.</span>
+          )}
         </div>
         <div className="row" style={{ gap: 4 }}>
           {depth === 0 && (

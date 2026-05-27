@@ -253,6 +253,7 @@ export type CashbackRule = {
   category_id: string
   cashback_percent: string
   monthly_limit: string | null
+  min_purchase_amount: string | null
   start_date: string
   end_date: string | null
 }
@@ -261,6 +262,7 @@ export type CashbackRuleCreate = {
   category_id: string
   cashback_percent: string | number
   monthly_limit?: string | number | null
+  min_purchase_amount?: string | number | null
   start_date: string
   end_date?: string | null
 }
@@ -275,6 +277,7 @@ export type CashbackRecommendation = {
   best_card_id: string
   best_card_name: string
   cashback_percent: string
+  min_purchase_amount?: string | null
 }
 
 export type CashbackAccrual = {

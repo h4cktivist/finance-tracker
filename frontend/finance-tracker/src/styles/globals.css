@@ -676,6 +676,8 @@ p { margin: 0; }
 
 @media (max-width: 900px) {
   .grid-2 { grid-template-columns: 1fr; }
+  /* Категории: бейдж «не обязат.» узкий ряд ломает на телефоне */
+  .category-nonessential-badge { display: none; }
 }
 
 @media (max-width: 900px) {

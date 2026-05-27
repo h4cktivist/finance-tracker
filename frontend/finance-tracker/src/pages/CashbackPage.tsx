@@ -129,6 +129,7 @@ export function CashbackPage() {
                   <tr>
                     <th>Категория</th>
                     <th>Процент</th>
+                    <th>Мин. сумма</th>
                     <th>Месячный лимит</th>
                     <th>Период</th>
                   </tr>
@@ -138,6 +139,9 @@ export function CashbackPage() {
                     <tr key={r.id}>
                       <td>{categoryMap[r.category_id]?.name ?? '—'}</td>
                       <td className="mono">{Number(r.cashback_percent).toFixed(2)}%</td>
+                      <td className="mono">
+                        {r.min_purchase_amount ? formatMoney(r.min_purchase_amount) : '—'}
+                      </td>
                       <td className="mono">{r.monthly_limit ? formatMoney(r.monthly_limit) : '—'}</td>
                       <td className="mono">
                         {formatDate(r.start_date)}
@@ -180,7 +184,12 @@ export function CashbackPage() {
                   }}>
                     <div>
                       <div style={{ fontWeight: 500 }}>{r.best_card_name}</div>
-                      <div className="dim">Лучшая для этой категории</div>
+                      <div className="dim">
+                      Лучшая для этой категории
+                      {r.min_purchase_amount
+                        ? ` · от ${formatMoney(r.min_purchase_amount)}`
+                        : ''}
+                    </div>
                     </div>
                     <div className="badge badge-success">
                       <TrendingUp size={12} /> {Number(r.cashback_percent).toFixed(2)}%
@@ -241,6 +250,7 @@ export function CashbackPage() {
               category_id: v.category_id,
               cashback_percent: v.cashback_percent,
               monthly_limit: v.monthly_limit || null,
+              min_purchase_amount: v.min_purchase_amount || null,
               start_date: v.start_date,
               end_date: v.end_date || null,
             })
@@ -322,6 +332,7 @@ const ruleSchema = z.object({
     const n = Number(v); return n > 0 && n <= 100
   }, 'От 0 до 100'),
   monthly_limit: z.string().optional().or(z.literal('')),
+  min_purchase_amount: z.string().optional().or(z.literal('')),
   start_date: z.string().min(1),
   end_date: z.string().optional().or(z.literal('')),
 })
@@ -340,7 +351,7 @@ function CreateRuleModal({
   } = useForm<RuleForm>({
     resolver: zodResolver(ruleSchema),
     defaultValues: {
-      category_id: '', cashback_percent: '5', monthly_limit: '',
+      category_id: '', cashback_percent: '5', monthly_limit: '', min_purchase_amount: '',
       start_date: todayIso(), end_date: '',
     },
   })
@@ -366,6 +377,20 @@ function CreateRuleModal({
             <label>Месячный лимит (опц.)</label>
             <input className="input mono" type="number" step="0.01" min="0" {...register('monthly_limit')} />
           </div>
+        </div>
+        <div className="field" style={{ marginTop: 12 }}>
+          <label>Мин. сумма покупки для кэшбэка (опц.)</label>
+          <input
+            className="input mono"
+            type="number"
+            step="0.01"
+            min="0.01"
+            placeholder="Например, 2000 — только от этой суммы"
+            {...register('min_purchase_amount')}
+          />
+          <span className="hint" style={{ display: 'block', marginTop: 6 }}>
+            Пустое поле — кэшбэк на любую сумму в категории
+          </span>
         </div>
         <div className="form-row form-row-2" style={{ marginTop: 12 }}>
           <div className="field">
