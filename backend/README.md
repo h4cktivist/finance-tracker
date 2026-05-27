@@ -19,7 +19,13 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-В Docker миграции применяются автоматически сервисом `migrate` до старта `api`.
+В Docker миграции **не** запускаются автоматически: после поднятия БД выполните один раз (или после `git pull`, если есть новые ревизии):
+
+```bash
+docker compose run --rm --no-deps api alembic upgrade head
+```
+
+Сервис `api` временно стартует с теми же `DATABASE_URL_*`, что и в `docker compose` (см. блок `environment`).
 
 Документация API: http://localhost:8000/docs
 
@@ -27,18 +33,14 @@ uvicorn app.main:app --reload
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up -d postgres redis --wait
+docker compose run --rm --no-deps api alembic upgrade head
+docker compose up -d --build
 ```
 
-При запуске сначала выполняется `alembic upgrade head` (сервис `migrate`), затем стартуют `api` и Celery.
+**Пароль PostgreSQL и volume:** переменные `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` в `.env` задают кластер только при **первом** создании тома `postgres_data`. Если раньше база уже инициализировалась с другим паролем, либо выставьте в `.env` тот же пароль, либо удалите том (потеря данных): `docker compose down -v`.
 
-Только миграции вручную:
-
-```bash
-docker compose run --rm migrate
-```
-
-Сервисы: `api` (порт 8000), `postgres`, `redis`, `celery-worker`, `celery-beat`
+Сервисы: `api` (порт 8000), `postgres`, `redis`, `celery-worker`, `celery-beat` (отдельного сервиса `migrate` нет).
 
 ## API
 

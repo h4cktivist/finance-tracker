@@ -146,10 +146,12 @@ flowchart TB
 ```bash
 cd backend
 cp .env.example .env
-docker compose up --build
+docker compose up -d postgres redis --wait
+docker compose run --rm --no-deps api alembic upgrade head
+docker compose up -d --build
 ```
 
-Поднимутся: PostgreSQL, Redis, миграции, API (`http://localhost:8000`), Celery worker и beat.  
+Поднимутся: PostgreSQL, Redis, API (`http://localhost:8000`), Celery worker и beat. Миграции применяйте вручную командой выше (или повторно после обновлений схемы).  
 Документация API: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ### Вариант 2: Backend локально
