@@ -19,6 +19,8 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
+При ошибке **`password authentication failed`** проверьте пароль в `.env`: переменная `POSTGRES_PASSWORD` должна совпадать с тем, что уже записан в текущем Docker-томе Postgres (или не задавайте `DATABASE_URL*` — только `POSTGRES_*`, см. `.env.example`).  
+
 В Docker миграции **не** запускаются автоматически: после поднятия БД выполните один раз (или после `git pull`, если есть новые ревизии):
 
 ```bash
@@ -39,6 +41,8 @@ docker compose up -d --build
 ```
 
 **Пароль PostgreSQL и volume:** переменные `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` в `.env` задают кластер только при **первом** создании тома `postgres_data`. Если раньше база уже инициализировалась с другим паролем, либо выставьте в `.env` тот же пароль, либо удалите том (потеря данных): `docker compose down -v`.
+
+Если **`alembic upgrade head` на машине разработчика падает с `InvalidPasswordError`**: приложение берёт строку подключения из `.env`. Либо уберите `DATABASE_URL` и `DATABASE_URL_SYNC` из `.env` и задайте только `POSTGRES_*`, чтобы пароль был в одном месте (они собираются автоматически в `app.core.config`), либо впишите в явные URL **тот же** пароль, с которым реально живёт ваш Postgres / том Docker.
 
 Сервисы: `api` (порт 8000), `postgres`, `redis`, `celery-worker`, `celery-beat` (отдельного сервиса `migrate` нет).
 
