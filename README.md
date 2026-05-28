@@ -156,6 +156,10 @@ docker compose up -d --build
 
 ### Вариант 2: Backend локально
 
+Postgres и Redis в compose по умолчанию доступны только внутри Docker-сети. Для доступа с хоста один раз:
+
+`cp docker-compose.override.example.yml docker-compose.override.yml`
+
 ```bash
 cd backend
 cp .env.example .env
@@ -183,12 +187,11 @@ VITE_API_BASE_URL=https://your-api.example.com/api/v1 npm run dev
 
 ### Порты по умолчанию
 
-| Сервис | Порт |
-|--------|------|
+| Сервис | Порт на хосте |
+|--------|----------------|
 | Frontend (Vite) | 5173 |
-| Backend API | 8000 |
-| PostgreSQL | 5432 |
-| Redis | 6379 |
+| Backend API (Docker) | 8000 |
+| PostgreSQL, Redis | только внутри сети compose; с хоста — через `docker-compose.override.yml` (см. `backend/docker-compose.override.example.yml`) |
 
 ---
 

@@ -11,8 +11,11 @@ Production-ready backend на FastAPI для учёта личных финан�
 
 ## Быстрый старт
 
+**Backend на хосте** (нужен доступ к Postgres/Redis с `localhost` — порты в compose по умолчанию не публикуются):
+
 ```bash
 cp .env.example .env
+cp docker-compose.override.example.yml docker-compose.override.yml
 docker compose up -d postgres redis
 pip install -r requirements-dev.txt
 alembic upgrade head
@@ -44,7 +47,9 @@ docker compose up -d --build
 
 Если **`alembic upgrade head` на машине разработчика падает с `InvalidPasswordError`**: приложение берёт строку подключения из `.env`. Либо уберите `DATABASE_URL` и `DATABASE_URL_SYNC` из `.env` и задайте только `POSTGRES_*`, чтобы пароль был в одном месте (они собираются автоматически в `app.core.config`), либо впишите в явные URL **тот же** пароль, с которым реально живёт ваш Postgres / том Docker.
 
-Сервисы: `api` (порт 8000), `postgres`, `redis`, `celery-worker`, `celery-beat` (отдельного сервиса `migrate` нет).
+Сервисы: `api` (порт **8000** наружу), `postgres`, `redis`, `celery-worker`, `celery-beat` (отдельного сервиса `migrate` нет). Все контейнеры в сети `internal`; Postgres и Redis **не** проброшены на хост (только `api`).
+
+Для локального `uvicorn`/`alembic` на машине: `docker-compose.override.example.yml` → `docker-compose.override.yml` (проброс 5432/6379).
 
 ## API
 
