@@ -1,4 +1,4 @@
-import { format, formatDistanceToNow, parseISO } from 'date-fns'
+import { endOfMonth, format, formatDistanceToNow, parseISO, startOfMonth } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
 const currencyFmt = new Intl.NumberFormat('ru-RU', {
@@ -44,6 +44,14 @@ export function formatRelative(value: string): string {
 
 export function todayIso(): string {
   return format(new Date(), 'yyyy-MM-dd')
+}
+
+export function currentMonthStartIso(): string {
+  return toIsoDate(startOfMonth(new Date()))
+}
+
+export function currentMonthEndIso(): string {
+  return toIsoDate(endOfMonth(new Date()))
 }
 
 export function toIsoDate(value: Date): string {

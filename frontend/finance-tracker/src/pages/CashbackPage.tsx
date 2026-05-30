@@ -17,7 +17,7 @@ import {
 } from '@/hooks/useQueries'
 import { Modal } from '@/components/Modal'
 import { EmptyState } from '@/components/EmptyState'
-import { formatDate, formatMoney, todayIso } from '@/lib/format'
+import { currentMonthEndIso, currentMonthStartIso, formatDate, formatMoney } from '@/lib/format'
 import { handleApiError } from '@/lib/errors'
 
 export function CashbackPage() {
@@ -352,7 +352,7 @@ function CreateRuleModal({
     resolver: zodResolver(ruleSchema),
     defaultValues: {
       category_id: '', cashback_percent: '5', monthly_limit: '', min_purchase_amount: '',
-      start_date: todayIso(), end_date: '',
+      start_date: currentMonthStartIso(), end_date: currentMonthEndIso(),
     },
   })
 
