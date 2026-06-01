@@ -9,6 +9,7 @@ from app.schemas.analytics import (
     HeatmapResponse,
     RatiosResponse,
     StatisticsResponse,
+    TrendsResponse,
 )
 from app.services.analytics import AnalyticsService
 
@@ -44,4 +45,13 @@ async def heatmap(
 async def ratios(user: CurrentUser, db: DbSession) -> APIResponse[RatiosResponse]:
     service = AnalyticsService(db)
     data = await service.ratios(user.id)
+    return APIResponse(data=data)
+
+
+@router.get("/trends", response_model=APIResponse[TrendsResponse])
+async def trends(
+    user: CurrentUser, db: DbSession, date_from: date | None = None, date_to: date | None = None
+) -> APIResponse[TrendsResponse]:
+    service = AnalyticsService(db)
+    data = await service.trends(user.id, date_from, date_to)
     return APIResponse(data=data)

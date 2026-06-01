@@ -19,6 +19,8 @@ from app.schemas.analytics import (
     HeatmapResponse,
     RatiosResponse,
     StatisticsResponse,
+    TrendPoint,
+    TrendsResponse,
 )
 
 
@@ -117,6 +119,49 @@ class AnalyticsService:
             for r in rows
         ]
         return HeatmapResponse(days=days)
+
+    async def trends(
+        self, user_id: UUID, date_from: date | None = None, date_to: date | None = None
+    ) -> TrendsResponse:
+        date_to = date_to or date.today()
+        date_from = date_from or date_to.replace(day=1)
+        result = await self.session.execute(
+            select(
+                Transaction.transaction_date,
+                Transaction.type,
+                func.coalesce(func.sum(Transaction.amount), 0),
+            )
+            .where(
+                Transaction.user_id == user_id,
+                Transaction.deleted_at.is_(None),
+                Transaction.transaction_date >= date_from,
+                Transaction.transaction_date <= date_to,
+                Transaction.type.in_([TransactionType.INCOME, TransactionType.EXPENSE]),
+            )
+            .group_by(Transaction.transaction_date, Transaction.type)
+            .order_by(Transaction.transaction_date)
+        )
+        by_date: dict[date, dict[str, Decimal]] = {}
+        for tx_date, tx_type, total in result.all():
+            day = by_date.setdefault(tx_date, {"income": Decimal("0"), "expenses": Decimal("0")})
+            amount = Decimal(str(total))
+            if tx_type == TransactionType.INCOME:
+                day["income"] = amount
+            else:
+                day["expenses"] = amount
+        points: list[TrendPoint] = []
+        current = date_from
+        while current <= date_to:
+            totals = by_date.get(current, {"income": Decimal("0"), "expenses": Decimal("0")})
+            points.append(
+                TrendPoint(
+                    date=current.isoformat(),
+                    income=totals["income"],
+                    expenses=totals["expenses"],
+                )
+            )
+            current += timedelta(days=1)
+        return TrendsResponse(points=points)
 
     async def ratios(self, user_id: UUID) -> RatiosResponse:
         today = date.today()

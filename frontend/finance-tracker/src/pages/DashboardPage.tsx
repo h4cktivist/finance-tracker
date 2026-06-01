@@ -19,18 +19,23 @@ import {
   TrendingUp,
   Wallet,
 } from 'lucide-react'
-import { useDashboard, useHeatmap, useRatios, useStatistics } from '@/hooks/useQueries'
-import { formatMoney } from '@/lib/format'
+import { useDashboard, useHeatmap, useRatios, useStatistics, useTrends } from '@/hooks/useQueries'
+import { currentMonthStartIso, formatMoney, todayIso } from '@/lib/format'
 import { Heatmap } from '@/components/Heatmap'
+import { IncomeExpenseTrendCharts } from '@/components/IncomeExpenseTrendCharts'
 import { Link } from 'react-router-dom'
 
 const PIE_COLORS = ['#7c5cff', '#38bdf8', '#2dd4bf', '#f5b450', '#ef4761', '#a78bfa', '#34d399']
+
+const monthFrom = currentMonthStartIso()
+const monthTo = todayIso()
 
 export function DashboardPage() {
   const dashboard = useDashboard()
   const stats = useStatistics()
   const heatmap = useHeatmap()
   const ratios = useRatios()
+  const trends = useTrends(monthFrom, monthTo)
 
   const d = dashboard.data
   const s = stats.data
@@ -82,6 +87,13 @@ export function DashboardPage() {
           <span className="hint">за месяц</span>
         </div>
       </section>
+
+      <IncomeExpenseTrendCharts
+        points={trends.data?.points}
+        dateFrom={monthFrom}
+        dateTo={monthTo}
+        periodLabel="текущий месяц"
+      />
 
       <section className="grid-2">
         <div className="card">

@@ -373,6 +373,16 @@ export type Ratios = {
   discretionary_spending_ratio: number
 }
 
+export type TrendPoint = {
+  date: string
+  income: string
+  expenses: string
+}
+
+export type Trends = {
+  points: TrendPoint[]
+}
+
 export type NotificationType =
   | 'budget_warning'
   | 'budget_exceeded'

@@ -11,9 +11,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { useHeatmap, useRatios, useStatistics } from '@/hooks/useQueries'
+import { useHeatmap, useRatios, useStatistics, useTrends } from '@/hooks/useQueries'
 import { formatMoney, toIsoDate } from '@/lib/format'
 import { Heatmap } from '@/components/Heatmap'
+import { IncomeExpenseTrendCharts } from '@/components/IncomeExpenseTrendCharts'
 
 const PIE_COLORS = ['#7c5cff', '#38bdf8', '#2dd4bf', '#f5b450', '#ef4761', '#a78bfa', '#34d399']
 
@@ -28,6 +29,7 @@ export function AnalyticsPage() {
   const [range, setRange] = useState<{ from: string; to: string }>(() => defaultRange(30))
   const stats = useStatistics(range.from, range.to)
   const heat = useHeatmap(range.from, range.to)
+  const trends = useTrends(range.from, range.to)
   const ratios = useRatios()
 
   const expenses = (stats.data?.top_expense_categories ?? []).map((c) => ({
@@ -78,6 +80,12 @@ export function AnalyticsPage() {
           <span className="value mono">{((ratios.data?.savings_rate ?? 0) * 100).toFixed(1)}%</span>
         </div>
       </section>
+
+      <IncomeExpenseTrendCharts
+        points={trends.data?.points}
+        dateFrom={range.from}
+        dateTo={range.to}
+      />
 
       <div className="grid-2">
         <div className="card">

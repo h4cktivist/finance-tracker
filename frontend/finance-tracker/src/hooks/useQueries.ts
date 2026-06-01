@@ -33,6 +33,7 @@ import type {
   RecurringCreate,
   RecurringUpdate,
   Statistics,
+  Trends,
   Tag,
   TagCreate,
   TagUpdate,
@@ -414,6 +415,18 @@ export function useHeatmap(dateFrom?: string, dateTo?: string) {
       if (dateFrom) params.date_from = dateFrom
       if (dateTo) params.date_to = dateTo
       return api.get<Heatmap>('/analytics/heatmap', params)
+    },
+  })
+}
+
+export function useTrends(dateFrom?: string, dateTo?: string) {
+  return useQuery({
+    queryKey: ['trends', dateFrom, dateTo],
+    queryFn: () => {
+      const params: Record<string, unknown> = {}
+      if (dateFrom) params.date_from = dateFrom
+      if (dateTo) params.date_to = dateTo
+      return api.get<Trends>('/analytics/trends', params)
     },
   })
 }
