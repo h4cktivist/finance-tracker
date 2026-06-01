@@ -66,7 +66,7 @@ export function DashboardPage() {
         </div>
         <div className="kpi">
           <span className="label"><PiggyBank size={14} /> Норма сбережений</span>
-          <span className="value mono">{((d?.savings_rate ?? 0) * 100).toFixed(1)}%</span>
+          <span className="value mono">{(d?.savings_rate ?? 0).toFixed(1)}%</span>
           <span className="hint">доход − расход</span>
         </div>
         <div className="kpi">
