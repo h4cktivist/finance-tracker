@@ -64,6 +64,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    volumes:
+      - .:/app
     command: ["celery", "-A", "app.tasks.celery_app", "worker", "--loglevel=info"]
     networks:
       - internal
@@ -84,6 +86,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    volumes:
+      - .:/app
     command: ["celery", "-A", "app.tasks.celery_app", "beat", "--loglevel=info"]
     networks:
       - internal
