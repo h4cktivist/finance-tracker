@@ -14,6 +14,8 @@ import type {
   CashbackRecommendation,
   CashbackRule,
   CashbackRuleCreate,
+  CashbackRuleUpdate,
+  CashbackRuleUpdateResult,
   CashbackSummary,
   Category,
   CategoryCreate,
@@ -192,6 +194,7 @@ export function useCreateTransaction() {
       qc.invalidateQueries({ queryKey: ['transactions'] })
       qc.invalidateQueries({ queryKey: accountsKey })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['goals'] })
       qc.invalidateQueries({ queryKey: ['statistics'] })
       qc.invalidateQueries({ queryKey: ['heatmap'] })
       qc.invalidateQueries({ queryKey: ['ratios'] })
@@ -218,6 +221,7 @@ export function useDeleteTransaction() {
       qc.invalidateQueries({ queryKey: ['transactions'] })
       qc.invalidateQueries({ queryKey: accountsKey })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['goals'] })
     },
   })
 }
@@ -231,6 +235,7 @@ export function useCorrectTransaction() {
       qc.invalidateQueries({ queryKey: ['transactions'] })
       qc.invalidateQueries({ queryKey: accountsKey })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['goals'] })
     },
   })
 }
@@ -327,7 +332,30 @@ export function useCreateCashbackRule(cardId: string) {
   return useMutation({
     mutationFn: (data: CashbackRuleCreate) =>
       api.post<CashbackRule>(`/cashback/cards/${cardId}/rules`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['cashback', 'rules', cardId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cashback', 'rules', cardId] })
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+    },
+  })
+}
+
+export function useUpdateCashbackRule(cardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ ruleId, data }: { ruleId: string; data: CashbackRuleUpdate }) =>
+      api.patch<CashbackRuleUpdateResult>(
+        `/cashback/cards/${cardId}/rules/${ruleId}`,
+        data,
+      ),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ['cashback', 'rules', cardId] })
+      qc.invalidateQueries({ queryKey: ['cashback', 'summary'] })
+      qc.invalidateQueries({ queryKey: ['cashback', 'missed'] })
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      if (result.recalculated_transactions > 0) {
+        qc.invalidateQueries({ queryKey: ['dashboard'] })
+      }
+    },
   })
 }
 

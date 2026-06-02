@@ -41,8 +41,8 @@ async def create_goal(
 
 @router.get("", response_model=APIResponse[list[GoalResponse]])
 async def list_goals(user: CurrentUser, db: DbSession) -> APIResponse[list[GoalResponse]]:
-    repo = GoalRepository(db)
-    goals = await repo.list_by_user(user.id)
+    service = GoalService(db)
+    goals = await service.list_by_user_with_sync(user.id)
     return APIResponse(data=[_goal_response(g) for g in goals])
 
 

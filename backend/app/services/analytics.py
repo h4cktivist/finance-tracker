@@ -22,6 +22,7 @@ from app.schemas.analytics import (
     TrendPoint,
     TrendsResponse,
 )
+from app.services.goal import GoalService
 
 
 class AnalyticsService:
@@ -33,6 +34,7 @@ class AnalyticsService:
         self.category_repo = CategoryRepository(session)
         self.cashback_repo = CashbackAccrualRepository(session)
         self.goal_repo = GoalRepository(session)
+        self.goal_service = GoalService(session)
 
     async def dashboard(self, user_id: UUID) -> DashboardResponse:
         accounts = await self.account_repo.list_by_user(user_id)
@@ -46,6 +48,8 @@ class AnalyticsService:
         savings_rate = float((income - expenses) / income * 100) if income > 0 else 0.0
         cashback = await self.cashback_repo.total_earned(user_id)
         goals = await self.goal_repo.list_by_user(user_id)
+        for goal in goals:
+            await self.goal_service.sync_progress(goal)
         goals_progress = [
             {
                 "goal_id": str(goal.id),

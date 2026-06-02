@@ -36,6 +36,22 @@ class CashbackRuleCreate(BaseModel):
     end_date: date | None = None
 
 
+class CashbackRuleUpdate(BaseModel):
+    cashback_percent: Decimal | None = Field(default=None, gt=0, le=100)
+    monthly_limit: Decimal | None = Field(default=None, gt=0)
+    min_purchase_amount: Decimal | None = Field(
+        default=None,
+        gt=0,
+        description="Минимальная сумма покупки; null — сбросить порог.",
+    )
+    start_date: date | None = None
+    end_date: date | None = None
+    recalculate_existing: bool = Field(
+        default=False,
+        description="Пересчитать кэшбэк для подходящих расходов в категории правила.",
+    )
+
+
 class CashbackRuleResponse(BaseModel):
     id: str
     card_id: str
@@ -46,6 +62,11 @@ class CashbackRuleResponse(BaseModel):
     start_date: date
     end_date: date | None
     model_config = {"from_attributes": True}
+
+
+class CashbackRuleUpdateResponse(BaseModel):
+    rule: CashbackRuleResponse
+    recalculated_transactions: int = 0
 
 
 class CashbackSummaryResponse(BaseModel):

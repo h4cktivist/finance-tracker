@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CreditCard, Plus, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
+import { CreditCard, Pencil, Plus, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -14,7 +14,9 @@ import {
   useCreateCard,
   useCreateCashbackRule,
   useMissedCashback,
+  useUpdateCashbackRule,
 } from '@/hooks/useQueries'
+import type { CashbackRule } from '@/lib/types'
 import { Modal } from '@/components/Modal'
 import { EmptyState } from '@/components/EmptyState'
 import { currentMonthEndIso, currentMonthStartIso, formatDate, formatMoney } from '@/lib/format'
@@ -24,6 +26,7 @@ export function CashbackPage() {
   const [createCardOpen, setCreateCardOpen] = useState(false)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
   const [ruleModalOpen, setRuleModalOpen] = useState(false)
+  const [editingRule, setEditingRule] = useState<CashbackRule | null>(null)
   const [recCategory, setRecCategory] = useState<string>('')
 
   const cards = useCards()
@@ -43,6 +46,7 @@ export function CashbackPage() {
 
   const createCard = useCreateCard()
   const createRule = useCreateCashbackRule(selectedCardId ?? '')
+  const updateRule = useUpdateCashbackRule(selectedCardId ?? '')
 
   return (
     <>
@@ -132,6 +136,7 @@ export function CashbackPage() {
                     <th>Мин. сумма</th>
                     <th>Месячный лимит</th>
                     <th>Период</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -146,6 +151,16 @@ export function CashbackPage() {
                       <td className="mono">
                         {formatDate(r.start_date)}
                         {r.end_date && ` — ${formatDate(r.end_date)}`}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-icon btn-sm"
+                          title="Редактировать"
+                          onClick={() => setEditingRule(r)}
+                        >
+                          <Pencil size={14} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -241,10 +256,12 @@ export function CashbackPage() {
         submitting={createCard.isPending}
       />}
 
-      {ruleModalOpen && selectedCardId && <CreateRuleModal
+      {ruleModalOpen && selectedCardId && <RuleFormModal
+        mode="create"
         onClose={() => setRuleModalOpen(false)}
         categories={expenseCategories}
         onSubmit={async (v) => {
+          if (!v.category_id) return
           try {
             await createRule.mutateAsync({
               category_id: v.category_id,
@@ -261,6 +278,37 @@ export function CashbackPage() {
           }
         }}
         submitting={createRule.isPending}
+      />}
+
+      {editingRule && selectedCardId && <RuleFormModal
+        mode="edit"
+        rule={editingRule}
+        categoryName={categoryMap[editingRule.category_id]?.name}
+        onClose={() => setEditingRule(null)}
+        categories={expenseCategories}
+        onSubmit={async (v) => {
+          try {
+            const result = await updateRule.mutateAsync({
+              ruleId: editingRule.id,
+              data: {
+                cashback_percent: v.cashback_percent,
+                monthly_limit: v.monthly_limit === '' ? null : (v.monthly_limit || null),
+                min_purchase_amount: v.min_purchase_amount === '' ? null : (v.min_purchase_amount || null),
+                start_date: v.start_date,
+                end_date: v.end_date || null,
+                recalculate_existing: v.recalculate_existing,
+              },
+            })
+            const msg = result.recalculated_transactions > 0
+              ? `Правило обновлено, пересчитано операций: ${result.recalculated_transactions}`
+              : 'Правило обновлено'
+            toast.success(msg)
+            setEditingRule(null)
+          } catch (e) {
+            handleApiError(e)
+          }
+        }}
+        submitting={updateRule.isPending}
       />}
     </>
   )
@@ -327,7 +375,7 @@ function CreateCardModal({
 }
 
 const ruleSchema = z.object({
-  category_id: z.string().min(1, 'Выберите категорию'),
+  category_id: z.string().optional(),
   cashback_percent: z.string().refine((v) => {
     const n = Number(v); return n > 0 && n <= 100
   }, 'От 0 до 100'),
@@ -335,37 +383,75 @@ const ruleSchema = z.object({
   min_purchase_amount: z.string().optional().or(z.literal('')),
   start_date: z.string().min(1),
   end_date: z.string().optional().or(z.literal('')),
+  recalculate_existing: z.boolean().optional(),
 })
 type RuleForm = z.infer<typeof ruleSchema>
 
-function CreateRuleModal({
-  onClose, categories, onSubmit, submitting,
+function RuleFormModal({
+  mode,
+  rule,
+  categoryName,
+  onClose,
+  categories,
+  onSubmit,
+  submitting,
 }: {
+  mode: 'create' | 'edit'
+  rule?: CashbackRule
+  categoryName?: string
   onClose: () => void
   categories: Array<{ id: string; name: string }>
   onSubmit: (v: RuleForm) => void
   submitting: boolean
 }) {
+  const isEdit = mode === 'edit'
   const {
     register, handleSubmit, formState: { errors }, reset,
   } = useForm<RuleForm>({
     resolver: zodResolver(ruleSchema),
-    defaultValues: {
-      category_id: '', cashback_percent: '5', monthly_limit: '', min_purchase_amount: '',
-      start_date: currentMonthStartIso(), end_date: currentMonthEndIso(),
-    },
+    defaultValues: isEdit && rule
+      ? {
+          category_id: rule.category_id,
+          cashback_percent: String(rule.cashback_percent),
+          monthly_limit: rule.monthly_limit ?? '',
+          min_purchase_amount: rule.min_purchase_amount ?? '',
+          start_date: rule.start_date,
+          end_date: rule.end_date ?? '',
+          recalculate_existing: false,
+        }
+      : {
+          category_id: '', cashback_percent: '5', monthly_limit: '', min_purchase_amount: '',
+          start_date: currentMonthStartIso(), end_date: currentMonthEndIso(),
+          recalculate_existing: false,
+        },
   })
 
   return (
-    <Modal open onClose={() => { onClose(); reset() }} title="Правило кэшбэка">
-      <form onSubmit={handleSubmit(onSubmit)}>
+    <Modal
+      open
+      onClose={() => { onClose(); reset() }}
+      title={isEdit ? 'Редактировать правило' : 'Правило кэшбэка'}
+    >
+      <form onSubmit={handleSubmit((v) => {
+        if (!isEdit && !v.category_id) {
+          toast.error('Выберите категорию')
+          return
+        }
+        onSubmit(v)
+      })}>
         <div className="field">
           <label>Категория</label>
-          <select className="select" {...register('category_id')}>
-            <option value="">Выберите категорию</option>
-            {categories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-          </select>
-          {errors.category_id && <span className="field-error">{errors.category_id.message}</span>}
+          {isEdit ? (
+            <input className="input" value={categoryName ?? '—'} disabled readOnly />
+          ) : (
+            <select className="select" {...register('category_id')}>
+              <option value="">Выберите категорию</option>
+              {categories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+            </select>
+          )}
+          {!isEdit && errors.category_id && (
+            <span className="field-error">{errors.category_id.message}</span>
+          )}
         </div>
         <div className="form-row form-row-2" style={{ marginTop: 12 }}>
           <div className="field">
@@ -402,10 +488,21 @@ function CreateRuleModal({
             <input className="input" type="date" {...register('end_date')} />
           </div>
         </div>
+        {isEdit && (
+          <label className="row" style={{ marginTop: 16, gap: 10, cursor: 'pointer' }}>
+            <input type="checkbox" {...register('recalculate_existing')} />
+            <span>
+              Пересчитать кэшбэк для прошлых расходов в этой категории
+              <span className="hint" style={{ display: 'block', marginTop: 4 }}>
+                Затронуты операции по этой карте (или без указанной карты) в периоде правила
+              </span>
+            </span>
+          </label>
+        )}
         <div className="modal-actions">
           <button type="button" className="btn btn-ghost" onClick={onClose}>Отмена</button>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? '…' : 'Создать'}
+            {submitting ? '…' : isEdit ? 'Сохранить' : 'Создать'}
           </button>
         </div>
       </form>

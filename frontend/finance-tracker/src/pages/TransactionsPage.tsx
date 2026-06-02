@@ -249,6 +249,7 @@ export function TransactionsPage() {
                   <th>Счёт</th>
                   <th>Теги</th>
                   <th style={{ textAlign: 'right' }}>Сумма</th>
+                  <th style={{ textAlign: 'right' }}>Кэшбэк</th>
                   <th></th>
                 </tr>
               </thead>
@@ -298,6 +299,13 @@ export function TransactionsPage() {
                           {t.type === 'expense' ? '−' : t.type === 'income' ? '+' : ''}
                           {formatMoney(t.amount)}
                         </span>
+                      </td>
+                      <td className="mono" style={{ textAlign: 'right' }}>
+                        {t.type === 'expense' && t.cashback_amount && Number(t.cashback_amount) > 0 ? (
+                          <span className="value-positive">+{formatMoney(t.cashback_amount)}</span>
+                        ) : (
+                          <span className="dim">—</span>
+                        )}
                       </td>
                       <td>
                         <div className="actions">

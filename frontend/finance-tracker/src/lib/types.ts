@@ -113,6 +113,7 @@ export type Transaction = {
   correction_of_id: string | null
   card_id: string | null
   tag_ids: string[]
+  cashback_amount: string | null
   created_at: string
   updated_at: string
 }
@@ -265,6 +266,20 @@ export type CashbackRuleCreate = {
   min_purchase_amount?: string | number | null
   start_date: string
   end_date?: string | null
+}
+
+export type CashbackRuleUpdate = {
+  cashback_percent?: string | number
+  monthly_limit?: string | number | null
+  min_purchase_amount?: string | number | null
+  start_date?: string
+  end_date?: string | null
+  recalculate_existing?: boolean
+}
+
+export type CashbackRuleUpdateResult = {
+  rule: CashbackRule
+  recalculated_transactions: number
 }
 
 export type CashbackSummary = {

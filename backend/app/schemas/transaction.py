@@ -57,6 +57,10 @@ class TransactionResponse(BaseModel):
     correction_of_id: str | None
     card_id: str | None
     tag_ids: list[str] = Field(default_factory=list)
+    cashback_amount: Decimal | None = Field(
+        default=None,
+        description="Начисленный кэшбэк (сумма accrued); только для расходов.",
+    )
     created_at: datetime
     updated_at: datetime
     model_config = {"from_attributes": True}
