@@ -89,7 +89,7 @@ export function CategoriesPage() {
 
   return (
     <>
-      <div className="row-between">
+      <div className="row-between page-toolbar">
         <div className="row" style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 12, padding: 4 }}>
           <button
             className={`btn btn-sm ${tab === 'expense' ? 'btn-primary' : 'btn-ghost'}`}
@@ -208,7 +208,7 @@ function TreeRow({
   return (
     <>
       <div
-        className="row-between"
+        className="row-between category-tree-row"
         style={{
           padding: '10px 12px',
           paddingLeft: 12 + depth * 22,
@@ -217,7 +217,7 @@ function TreeRow({
           border: depth === 0 ? '1px solid var(--border)' : 'none',
         }}
       >
-        <div className="row" style={{ gap: 8 }}>
+        <div className="row category-tree-main" style={{ gap: 8, minWidth: 0 }}>
           {hasChildren ? (
             <button
               type="button"
@@ -249,7 +249,7 @@ function TreeRow({
             <span className="badge badge-muted category-nonessential-badge">не обязат.</span>
           )}
         </div>
-        <div className="row" style={{ gap: 4 }}>
+        <div className="row category-tree-actions" style={{ gap: 4 }}>
           {depth === 0 && (
             <button
               className="btn btn-ghost btn-icon btn-sm"

@@ -60,7 +60,7 @@ export function RecurringPage() {
 
   return (
     <>
-      <div className="row-between">
+      <div className="row-between page-toolbar">
         <div className="muted">Подписки, ежемесячные платежи и регулярные операции</div>
         <button className="btn btn-primary" onClick={() => setOpen(true)}>
           <Plus size={16} /> Добавить
@@ -82,7 +82,7 @@ export function RecurringPage() {
         <div className="grid-2">
           {recurring.data.map((r) => (
             <div key={r.id} className="card">
-              <div className="row-between">
+              <div className="row-between recurring-card-header">
                 <div>
                   <h3>{r.description || (r.category_id ? catMap[r.category_id]?.name : 'Без описания')}</h3>
                   <div className="dim">

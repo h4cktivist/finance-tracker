@@ -29,6 +29,7 @@ import {
   useTransactions,
   useUpdateTransaction,
 } from '@/hooks/useQueries'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import type {
   Transaction,
   TransactionCreate,
@@ -37,6 +38,7 @@ import type {
 import { Modal } from '@/components/Modal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
+import { TransactionDetailSheet } from '@/components/TransactionDetailSheet'
 import { formatDate, formatMoney, todayIso } from '@/lib/format'
 import { handleApiError } from '@/lib/errors'
 
@@ -72,6 +74,8 @@ export function TransactionsPage() {
   const [editing, setEditing] = useState<Transaction | null>(null)
   const [correcting, setCorrecting] = useState<Transaction | null>(null)
   const [deleting, setDeleting] = useState<Transaction | null>(null)
+  const [detailTx, setDetailTx] = useState<Transaction | null>(null)
+  const isMobileList = useMediaQuery('(max-width: 900px)')
 
   const queryFilters = useMemo(
     () => ({ ...filters, search: search || undefined, page, page_size: 20 }),
@@ -82,6 +86,7 @@ export function TransactionsPage() {
   const accounts = useAccounts()
   const categories = useCategories()
   const tags = useTags()
+  const cards = useCards()
 
   const create = useCreateTransaction()
   const update = useUpdateTransaction()
@@ -100,6 +105,15 @@ export function TransactionsPage() {
     () => Object.fromEntries((tags.data ?? []).map((t) => [t.id, t])),
     [tags.data],
   )
+  const cardMap = useMemo(
+    () => Object.fromEntries((cards.data ?? []).map((c) => [c.id, c])),
+    [cards.data],
+  )
+
+  function openDetail(t: Transaction) {
+    if (!isMobileList) return
+    setDetailTx(t)
+  }
 
   async function handleDelete() {
     if (!deleting) return
@@ -124,9 +138,9 @@ export function TransactionsPage() {
 
   return (
     <>
-      <div className="row" style={{ gap: 10, flexWrap: 'wrap', justifyContent: 'space-between' }}>
+      <div className="row page-toolbar" style={{ gap: 10, flexWrap: 'wrap', justifyContent: 'space-between' }}>
         <div className="row" style={{ gap: 10, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
-          <div className="row" style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 12, padding: '4px 12px', gap: 8, flex: 1, minWidth: 200, maxWidth: 360 }}>
+          <div className="row search-bar" style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 12, padding: '4px 12px', gap: 8, flex: 1, minWidth: 200, maxWidth: 360 }}>
             <Search size={14} className="muted" />
             <input
               className="input"
@@ -239,7 +253,7 @@ export function TransactionsPage() {
           />
         ) : (
           <div className="table-wrap">
-            <table className="table">
+            <table className="table table--transactions">
               <thead>
                 <tr>
                   <th>Дата</th>
@@ -258,7 +272,11 @@ export function TransactionsPage() {
                   const acc = accountMap[t.account_id]
                   const cat = t.category_id ? categoryMap[t.category_id] : null
                   return (
-                    <tr key={t.id}>
+                    <tr
+                      key={t.id}
+                      className={isMobileList ? 'transaction-row-clickable' : undefined}
+                      onClick={isMobileList ? () => openDetail(t) : undefined}
+                    >
                       <td className="mono">{formatDate(t.transaction_date)}</td>
                       <td>{renderTypeBadge(t.type)}</td>
                       <td>
@@ -307,7 +325,7 @@ export function TransactionsPage() {
                           <span className="dim">—</span>
                         )}
                       </td>
-                      <td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <div className="actions">
                           <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setEditing(t)} title="Редактировать">
                             <Pencil size={14} />
@@ -405,6 +423,18 @@ export function TransactionsPage() {
         }}
         submitting={correct.isPending}
       />}
+
+      <TransactionDetailSheet
+        transaction={detailTx}
+        onClose={() => setDetailTx(null)}
+        accountMap={accountMap}
+        categoryMap={categoryMap}
+        tagMap={tagMap}
+        cardMap={cardMap}
+        onEdit={setEditing}
+        onCorrect={setCorrecting}
+        onDelete={setDeleting}
+      />
 
       <ConfirmDialog
         open={!!deleting}

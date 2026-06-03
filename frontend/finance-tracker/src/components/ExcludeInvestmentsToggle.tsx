@@ -4,18 +4,7 @@ export function ExcludeInvestmentsToggle() {
   const { excludeInvestments, setExcludeInvestments } = useAnalyticsPreferences()
 
   return (
-    <label
-      className="row"
-      style={{
-        gap: 10,
-        cursor: 'pointer',
-        padding: '10px 14px',
-        background: 'rgba(11,16,32,0.35)',
-        border: '1px solid var(--border)',
-        borderRadius: 12,
-        flexWrap: 'wrap',
-      }}
-    >
+    <label className="exclude-investments-toggle">
       <input
         type="checkbox"
         checked={excludeInvestments}

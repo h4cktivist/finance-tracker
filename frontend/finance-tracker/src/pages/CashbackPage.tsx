@@ -128,7 +128,7 @@ export function CashbackPage() {
             </div>
           ) : (
             <div className="table-wrap">
-              <table className="table">
+              <table className="table table--cashback-rules">
                 <thead>
                   <tr>
                     <th>Категория</th>

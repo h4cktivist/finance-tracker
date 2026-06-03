@@ -53,7 +53,7 @@ export function GoalsPage() {
 
   return (
     <>
-      <div className="row-between">
+      <div className="row-between page-toolbar">
         <div className="muted">Откладывайте деньги на крупные покупки и мечты</div>
         <button className="btn btn-primary" onClick={() => { setEditing(null); setOpen(true) }}>
           <Plus size={16} /> Новая цель

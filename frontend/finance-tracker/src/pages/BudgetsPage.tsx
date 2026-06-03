@@ -61,7 +61,7 @@ export function BudgetsPage() {
 
   return (
     <>
-      <div className="row-between">
+      <div className="row-between page-toolbar">
         <div className="muted">Управляйте лимитами по категориям расходов</div>
         <button className="btn btn-primary" onClick={() => { setEditing(null); setOpen(true) }}>
           <Plus size={16} /> Новый бюджет

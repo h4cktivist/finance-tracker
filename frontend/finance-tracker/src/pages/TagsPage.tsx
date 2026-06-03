@@ -51,7 +51,7 @@ export function TagsPage() {
 
   return (
     <>
-      <div className="row-between">
+      <div className="row-between page-toolbar">
         <div className="muted">Используйте теги для гибкой категоризации операций</div>
         <button className="btn btn-primary" onClick={openCreate}>
           <Plus size={16} /> Новый тег

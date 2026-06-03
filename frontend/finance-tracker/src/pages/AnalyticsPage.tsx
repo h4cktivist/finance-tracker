@@ -49,19 +49,23 @@ export function AnalyticsPage() {
       <ExcludeInvestmentsToggle />
 
       <div className="card">
-        <div className="row" style={{ gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div className="field">
-            <label>Дата от</label>
-            <input className="input" type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} />
+        <div className="date-range-toolbar">
+          <div className="date-range-fields">
+            <div className="field">
+              <label>Дата от</label>
+              <input className="input" type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>Дата до</label>
+              <input className="input" type="date" value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} />
+            </div>
           </div>
-          <div className="field">
-            <label>Дата до</label>
-            <input className="input" type="date" value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} />
+          <div className="date-range-presets">
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRange(defaultRange(7))}>Неделя</button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRange(defaultRange(30))}>30 дней</button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRange(defaultRange(90))}>3 месяца</button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRange(defaultRange(365))}>Год</button>
           </div>
-          <button className="btn btn-secondary btn-sm" onClick={() => setRange(defaultRange(7))}>Неделя</button>
-          <button className="btn btn-secondary btn-sm" onClick={() => setRange(defaultRange(30))}>30 дней</button>
-          <button className="btn btn-secondary btn-sm" onClick={() => setRange(defaultRange(90))}>3 месяца</button>
-          <button className="btn btn-secondary btn-sm" onClick={() => setRange(defaultRange(365))}>Год</button>
         </div>
       </div>
 
@@ -100,7 +104,7 @@ export function AnalyticsPage() {
           {expenses.length === 0 ? (
             <div className="empty"><p>Нет данных</p></div>
           ) : (
-            <div style={{ height: 300 }}>
+            <div className="chart-area">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={expenses} dataKey="value" innerRadius={70} outerRadius={110} paddingAngle={2}>
@@ -148,7 +152,7 @@ export function AnalyticsPage() {
           {incomes.length === 0 ? (
             <div className="empty"><p>Нет данных</p></div>
           ) : (
-            <div style={{ height: 300 }}>
+            <div className="chart-area">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={incomes}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,134,200,0.12)" />

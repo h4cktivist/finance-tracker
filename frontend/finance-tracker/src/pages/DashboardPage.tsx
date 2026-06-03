@@ -109,7 +109,7 @@ export function DashboardPage() {
           {expensePie.length === 0 ? (
             <div className="empty"><p>Нет данных</p></div>
           ) : (
-            <div style={{ height: 280 }}>
+            <div className="chart-area">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -135,7 +135,7 @@ export function DashboardPage() {
                   />
                 </PieChart>
               </ResponsiveContainer>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+              <div className="pie-legend" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
                 {expensePie.map((entry, i) => (
                   <span key={entry.name} className="pill">
                     <span className="color-swatch" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
@@ -155,7 +155,7 @@ export function DashboardPage() {
           {incomeBars.length === 0 ? (
             <div className="empty"><p>Нет данных</p></div>
           ) : (
-            <div style={{ height: 280 }}>
+            <div className="chart-area">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={incomeBars}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,134,200,0.12)" />

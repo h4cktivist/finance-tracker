@@ -30,7 +30,7 @@ export function Modal({ open, onClose, title, subtitle, children, size = 'md' }:
         className={`modal ${size === 'lg' ? 'modal-lg' : ''} ${size === 'xl' ? 'modal-xl' : ''}`}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="row-between" style={{ marginBottom: 4 }}>
+        <div className="row-between modal-header" style={{ marginBottom: 4 }}>
           <h3>{title}</h3>
           <button type="button" className="btn btn-ghost btn-icon" onClick={onClose} aria-label="Закрыть">
             <X size={16} />

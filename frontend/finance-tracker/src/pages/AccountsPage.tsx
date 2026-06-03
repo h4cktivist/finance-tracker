@@ -72,7 +72,7 @@ export function AccountsPage() {
 
   return (
     <>
-      <div className="row-between">
+      <div className="row-between page-toolbar">
         <div>
           <div className="muted">Всего счетов: {data?.length ?? 0}</div>
           <div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }} className="mono">

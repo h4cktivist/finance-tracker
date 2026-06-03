@@ -36,7 +36,7 @@ export function NotificationsPage() {
 
   return (
     <>
-      <div className="row-between">
+      <div className="row-between page-toolbar">
         <div className="row" style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 12, padding: 4 }}>
           <button
             className={`btn btn-sm ${!unreadOnly ? 'btn-primary' : 'btn-ghost'}`}

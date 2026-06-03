@@ -70,7 +70,7 @@ function TrendLineChart({
       {!hasAnyValue(rows, dataKey) ? (
         <div className="empty"><p>Нет данных за период</p></div>
       ) : (
-        <div style={{ height: 260 }}>
+        <div className="chart-area">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={rows}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,134,200,0.12)" />
