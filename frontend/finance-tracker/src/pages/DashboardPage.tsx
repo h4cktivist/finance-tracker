@@ -19,6 +19,8 @@ import {
   TrendingUp,
   Wallet,
 } from 'lucide-react'
+import { ExcludeInvestmentsToggle } from '@/components/ExcludeInvestmentsToggle'
+import { useAnalyticsPreferences } from '@/context/AnalyticsPreferencesContext'
 import { useDashboard, useHeatmap, useRatios, useStatistics, useTrends } from '@/hooks/useQueries'
 import { currentMonthStartIso, formatMoney, todayIso } from '@/lib/format'
 import { Heatmap } from '@/components/Heatmap'
@@ -31,11 +33,12 @@ const monthFrom = currentMonthStartIso()
 const monthTo = todayIso()
 
 export function DashboardPage() {
-  const dashboard = useDashboard()
-  const stats = useStatistics()
-  const heatmap = useHeatmap()
-  const ratios = useRatios()
-  const trends = useTrends(monthFrom, monthTo)
+  const { excludeInvestments } = useAnalyticsPreferences()
+  const dashboard = useDashboard(excludeInvestments)
+  const stats = useStatistics(undefined, undefined, excludeInvestments)
+  const heatmap = useHeatmap(undefined, undefined, excludeInvestments)
+  const ratios = useRatios(excludeInvestments)
+  const trends = useTrends(monthFrom, monthTo, excludeInvestments)
 
   const d = dashboard.data
   const s = stats.data
@@ -53,6 +56,8 @@ export function DashboardPage() {
 
   return (
     <>
+      <ExcludeInvestmentsToggle />
+
       <section className="kpi-grid">
         <div className="kpi">
           <span className="label"><Wallet size={14} /> Общий баланс</span>

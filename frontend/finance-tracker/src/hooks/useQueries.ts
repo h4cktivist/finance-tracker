@@ -416,51 +416,70 @@ export function useUpdateGoal() {
 }
 
 // === Analytics ===
-export function useDashboard() {
+function analyticsParams(
+  excludeInvestments: boolean,
+  extra?: Record<string, unknown>,
+): Record<string, unknown> {
+  const params: Record<string, unknown> = { ...extra }
+  if (excludeInvestments) params.exclude_investments = true
+  return params
+}
+
+export function useDashboard(excludeInvestments = false) {
   return useQuery({
-    queryKey: ['dashboard'],
-    queryFn: () => api.get<Dashboard>('/analytics/dashboard'),
+    queryKey: ['dashboard', excludeInvestments],
+    queryFn: () => api.get<Dashboard>('/analytics/dashboard', analyticsParams(excludeInvestments)),
   })
 }
 
-export function useStatistics(dateFrom?: string, dateTo?: string) {
+export function useStatistics(
+  dateFrom?: string,
+  dateTo?: string,
+  excludeInvestments = false,
+) {
   return useQuery({
-    queryKey: ['statistics', dateFrom, dateTo],
+    queryKey: ['statistics', dateFrom, dateTo, excludeInvestments],
     queryFn: () => {
       const params: Record<string, unknown> = {}
       if (dateFrom) params.date_from = dateFrom
       if (dateTo) params.date_to = dateTo
-      return api.get<Statistics>('/analytics/statistics', params)
+      return api.get<Statistics>(
+        '/analytics/statistics',
+        analyticsParams(excludeInvestments, params),
+      )
     },
   })
 }
 
-export function useHeatmap(dateFrom?: string, dateTo?: string) {
+export function useHeatmap(dateFrom?: string, dateTo?: string, excludeInvestments = false) {
   return useQuery({
-    queryKey: ['heatmap', dateFrom, dateTo],
+    queryKey: ['heatmap', dateFrom, dateTo, excludeInvestments],
     queryFn: () => {
       const params: Record<string, unknown> = {}
       if (dateFrom) params.date_from = dateFrom
       if (dateTo) params.date_to = dateTo
-      return api.get<Heatmap>('/analytics/heatmap', params)
+      return api.get<Heatmap>('/analytics/heatmap', analyticsParams(excludeInvestments, params))
     },
   })
 }
 
-export function useTrends(dateFrom?: string, dateTo?: string) {
+export function useTrends(dateFrom?: string, dateTo?: string, excludeInvestments = false) {
   return useQuery({
-    queryKey: ['trends', dateFrom, dateTo],
+    queryKey: ['trends', dateFrom, dateTo, excludeInvestments],
     queryFn: () => {
       const params: Record<string, unknown> = {}
       if (dateFrom) params.date_from = dateFrom
       if (dateTo) params.date_to = dateTo
-      return api.get<Trends>('/analytics/trends', params)
+      return api.get<Trends>('/analytics/trends', analyticsParams(excludeInvestments, params))
     },
   })
 }
 
-export function useRatios() {
-  return useQuery({ queryKey: ['ratios'], queryFn: () => api.get<Ratios>('/analytics/ratios') })
+export function useRatios(excludeInvestments = false) {
+  return useQuery({
+    queryKey: ['ratios', excludeInvestments],
+    queryFn: () => api.get<Ratios>('/analytics/ratios', analyticsParams(excludeInvestments)),
+  })
 }
 
 // === Notifications ===

@@ -11,6 +11,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { ExcludeInvestmentsToggle } from '@/components/ExcludeInvestmentsToggle'
+import { useAnalyticsPreferences } from '@/context/AnalyticsPreferencesContext'
 import { useHeatmap, useRatios, useStatistics, useTrends } from '@/hooks/useQueries'
 import { formatMoney, toIsoDate } from '@/lib/format'
 import { Heatmap } from '@/components/Heatmap'
@@ -26,11 +28,12 @@ function defaultRange(daysBack: number) {
 }
 
 export function AnalyticsPage() {
+  const { excludeInvestments } = useAnalyticsPreferences()
   const [range, setRange] = useState<{ from: string; to: string }>(() => defaultRange(30))
-  const stats = useStatistics(range.from, range.to)
-  const heat = useHeatmap(range.from, range.to)
-  const trends = useTrends(range.from, range.to)
-  const ratios = useRatios()
+  const stats = useStatistics(range.from, range.to, excludeInvestments)
+  const heat = useHeatmap(range.from, range.to, excludeInvestments)
+  const trends = useTrends(range.from, range.to, excludeInvestments)
+  const ratios = useRatios(excludeInvestments)
 
   const expenses = (stats.data?.top_expense_categories ?? []).map((c) => ({
     name: c.category_name,
@@ -43,6 +46,8 @@ export function AnalyticsPage() {
 
   return (
     <>
+      <ExcludeInvestmentsToggle />
+
       <div className="card">
         <div className="row" style={{ gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div className="field">
