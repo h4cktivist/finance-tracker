@@ -77,6 +77,15 @@ class GoalService:
             status=goal.status,
         )
 
+    async def list_by_user_with_sync(self, user_id: UUID) -> list[FinancialGoal]:
+        """
+        Returns goals with `current_amount` synchronized to the linked account balance.
+        """
+        goals = await self.repo.list_by_user(user_id)
+        for goal in goals:
+            await self.sync_progress(goal)
+        return goals
+
     async def check_deadlines(self) -> None:
         goals = await self.repo.list_active_with_deadline(settings.goal_deadline_warning_days)
         for goal in goals:

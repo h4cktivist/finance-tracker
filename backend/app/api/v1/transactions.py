@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
@@ -7,7 +8,8 @@ from fastapi import APIRouter, Depends, Query
 from app.core.deps import CurrentUser, DbSession, get_client_ip
 from app.core.exceptions import NotFoundError
 from app.core.responses import APIResponse
-from app.models.transaction import TransactionType
+from app.models.transaction import Transaction, TransactionType
+from app.repositories.cashback import CashbackAccrualRepository
 from app.repositories.tag import TagRepository
 from app.repositories.transaction import TransactionRepository
 from app.schemas.transaction import (
@@ -22,9 +24,33 @@ from app.services.ledger import TransactionService
 router = APIRouter()
 
 
-async def _tx_response(db, tx) -> TransactionResponse:
+def _cashback_for_expense(
+    tx: Transaction, accrued: dict[UUID, Decimal]
+) -> Decimal | None:
+    if tx.type != TransactionType.EXPENSE:
+        return None
+    amount = accrued.get(tx.id, Decimal("0"))
+    return amount if amount > 0 else None
+
+
+async def _load_cashback_map(db, transactions: list[Transaction]) -> dict[UUID, Decimal]:
+    expense_ids = [tx.id for tx in transactions if tx.type == TransactionType.EXPENSE]
+    if not expense_ids:
+        return {}
+    repo = CashbackAccrualRepository(db)
+    return await repo.sum_accrued_by_transaction_ids(expense_ids)
+
+
+async def _tx_response(
+    db,
+    tx: Transaction,
+    *,
+    cashback_by_tx: dict[UUID, Decimal] | None = None,
+) -> TransactionResponse:
     tag_repo = TagRepository(db)
     tag_ids = [str(t) for t in await tag_repo.get_transaction_tag_ids(tx.id)]
+    if cashback_by_tx is None:
+        cashback_by_tx = await _load_cashback_map(db, [tx])
     return TransactionResponse(
         id=str(tx.id),
         user_id=str(tx.user_id),
@@ -40,6 +66,7 @@ async def _tx_response(db, tx) -> TransactionResponse:
         correction_of_id=str(tx.correction_of_id) if tx.correction_of_id else None,
         card_id=str(tx.card_id) if tx.card_id else None,
         tag_ids=tag_ids,
+        cashback_amount=_cashback_for_expense(tx, cashback_by_tx),
         created_at=tx.created_at,
         updated_at=tx.updated_at,
     )
@@ -55,8 +82,10 @@ async def create_transaction(
     service = TransactionService(db)
     result = await service.create(user.id, data, ip=ip)
     if isinstance(result, list):
+        cashback_by_tx = await _load_cashback_map(db, result)
         return APIResponse(
-            data=[await _tx_response(db, tx) for tx in result], message="Transfer created"
+            data=[await _tx_response(db, tx, cashback_by_tx=cashback_by_tx) for tx in result],
+            message="Transfer created",
         )
     return APIResponse(data=await _tx_response(db, result))
 
@@ -93,9 +122,12 @@ async def list_transactions(
         sort_order=sort_order,
     )
     pages = (total + page_size - 1) // page_size if page_size else 0
+    cashback_by_tx = await _load_cashback_map(db, items)
     return APIResponse(
         data=TransactionListResponse(
-            items=[await _tx_response(db, tx) for tx in items],
+            items=[
+                await _tx_response(db, tx, cashback_by_tx=cashback_by_tx) for tx in items
+            ],
             total=total,
             page=page,
             page_size=page_size,

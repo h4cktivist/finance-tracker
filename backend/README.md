@@ -11,15 +11,26 @@ Production-ready backend на FastAPI для учёта личных финан�
 
 ## Быстрый старт
 
+**Backend на хосте** (нужен доступ к Postgres/Redis с `localhost` — порты в compose по умолчанию не публикуются):
+
 ```bash
 cp .env.example .env
+cp docker-compose.override.example.yml docker-compose.override.yml
 docker compose up -d postgres redis
 pip install -r requirements-dev.txt
 alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-В Docker миграции применяются автоматически сервисом `migrate` до старта `api`.
+При ошибке **`password authentication failed`** проверьте пароль в `.env`: переменная `POSTGRES_PASSWORD` должна совпадать с тем, что уже записан в текущем Docker-томе Postgres (или не задавайте `DATABASE_URL*` — только `POSTGRES_*`, см. `.env.example`).  
+
+В Docker миграции **не** запускаются автоматически: после поднятия БД выполните один раз (или после `git pull`, если есть новые ревизии):
+
+```bash
+docker compose run --rm --no-deps api alembic upgrade head
+```
+
+Сервис `api` временно стартует с теми же `DATABASE_URL_*`, что и в `docker compose` (см. блок `environment`).
 
 Документация API: http://localhost:8000/docs
 
@@ -27,18 +38,18 @@ uvicorn app.main:app --reload
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up -d postgres redis --wait
+docker compose run --rm --no-deps api alembic upgrade head
+docker compose up -d --build
 ```
 
-При запуске сначала выполняется `alembic upgrade head` (сервис `migrate`), затем стартуют `api` и Celery.
+**Пароль PostgreSQL и volume:** переменные `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` в `.env` задают кластер только при **первом** создании тома `postgres_data`. Если раньше база уже инициализировалась с другим паролем, либо выставьте в `.env` тот же пароль, либо удалите том (потеря данных): `docker compose down -v`.
 
-Только миграции вручную:
+Если **`alembic upgrade head` на машине разработчика падает с `InvalidPasswordError`**: приложение берёт строку подключения из `.env`. Либо уберите `DATABASE_URL` и `DATABASE_URL_SYNC` из `.env` и задайте только `POSTGRES_*`, чтобы пароль был в одном месте (они собираются автоматически в `app.core.config`), либо впишите в явные URL **тот же** пароль, с которым реально живёт ваш Postgres / том Docker.
 
-```bash
-docker compose run --rm migrate
-```
+Сервисы: `api` (порт **8000** наружу), `postgres`, `redis`, `celery-worker`, `celery-beat` (отдельного сервиса `migrate` нет). Все контейнеры в сети `internal`; Postgres и Redis **не** проброшены на хост (только `api`).
 
-Сервисы: `api` (порт 8000), `postgres`, `redis`, `celery-worker`, `celery-beat`
+Для локального `uvicorn`/`alembic` на машине: `docker-compose.override.example.yml` → `docker-compose.override.yml` (проброс 5432/6379).
 
 ## API
 
@@ -397,7 +408,7 @@ Authorization: Bearer <access_token>
 | GET | `/missed` | Упущенный кэшбэк |
 | GET | `/recommendations` | Лучшая карта для категории |
 
-Кэшбэк начисляется автоматически при создании `expense` с указанным `category_id`.
+Кэшбэк начисляется автоматически при создании `expense` с указанным `category_id` и подходящей картой; учитывается опциональный **минимум суммы покупки** в правиле (ниже порога начисления нет).
 
 #### POST `/cards`
 
@@ -416,6 +427,7 @@ Authorization: Bearer <access_token>
 | `cashback_percent` | decimal | да | Процент, 0–100 |
 | `start_date` | date | да | Начало действия правила |
 | `monthly_limit` | decimal | нет | Лимит кэшбэка в месяц (> 0) |
+| `min_purchase_amount` | decimal | нет | Минимальная сумма операции для начисления (> 0); без поля — на любую сумму |
 | `end_date` | date | нет | Конец действия |
 
 #### GET `/summary` — query
@@ -429,6 +441,8 @@ Authorization: Bearer <access_token>
 | Параметр | Тип | Обязательно | Описание |
 |----------|-----|-------------|----------|
 | `category_id` | UUID | да | Категория покупки |
+
+Ответ содержит `best_card_*`, `cashback_percent` и при наличии порога — `min_purchase_amount`.
 
 ---
 

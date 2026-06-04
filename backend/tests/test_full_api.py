@@ -329,6 +329,8 @@ async def test_full_api_surface(client: AsyncClient):
     assert "days" in heatmap
     ratios = _ok(await client.get("/api/v1/analytics/ratios", headers=headers))["data"]
     assert "savings_rate" in ratios
+    trends = _ok(await client.get("/api/v1/analytics/trends", headers=headers))["data"]
+    assert "points" in trends and isinstance(trends["points"], list)
     notif_list = _ok(await client.get("/api/v1/notifications", headers=headers))["data"]
     assert notif_list["total"] >= 1
     notif_id = notif_list["items"][0]["id"]

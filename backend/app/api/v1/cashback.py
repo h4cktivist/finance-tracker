@@ -16,6 +16,8 @@ from app.schemas.cashback import (
     CashbackRecommendation,
     CashbackRuleCreate,
     CashbackRuleResponse,
+    CashbackRuleUpdate,
+    CashbackRuleUpdateResponse,
     CashbackSummaryResponse,
 )
 from app.services.cashback import CashbackService
@@ -73,15 +75,40 @@ async def create_rule(
 ) -> APIResponse[CashbackRuleResponse]:
     service = CashbackService(db)
     rule = await service.create_rule(user.id, card_id, data, ip=ip)
+    return APIResponse(data=_rule_response(rule))
+
+
+def _rule_response(rule) -> CashbackRuleResponse:
+    return CashbackRuleResponse(
+        id=str(rule.id),
+        card_id=str(rule.card_id),
+        category_id=str(rule.category_id),
+        cashback_percent=rule.cashback_percent,
+        monthly_limit=rule.monthly_limit,
+        min_purchase_amount=rule.min_purchase_amount,
+        start_date=rule.start_date,
+        end_date=rule.end_date,
+    )
+
+
+@router.patch(
+    "/cards/{card_id}/rules/{rule_id}",
+    response_model=APIResponse[CashbackRuleUpdateResponse],
+)
+async def update_rule(
+    card_id: UUID,
+    rule_id: UUID,
+    data: CashbackRuleUpdate,
+    user: CurrentUser,
+    db: DbSession,
+    ip: Annotated[str | None, Depends(get_client_ip)] = None,
+) -> APIResponse[CashbackRuleUpdateResponse]:
+    service = CashbackService(db)
+    rule, recalculated = await service.update_rule(user.id, card_id, rule_id, data, ip=ip)
     return APIResponse(
-        data=CashbackRuleResponse(
-            id=str(rule.id),
-            card_id=str(rule.card_id),
-            category_id=str(rule.category_id),
-            cashback_percent=rule.cashback_percent,
-            monthly_limit=rule.monthly_limit,
-            start_date=rule.start_date,
-            end_date=rule.end_date,
+        data=CashbackRuleUpdateResponse(
+            rule=_rule_response(rule),
+            recalculated_transactions=recalculated,
         )
     )
 
@@ -94,20 +121,7 @@ async def list_rules(card_id: UUID, user: CurrentUser, db: DbSession) -> APIResp
         raise NotFoundError("Card not found")
     rule_repo = CashbackRuleRepository(db)
     rules = await rule_repo.list_for_card(card_id)
-    return APIResponse(
-        data=[
-            CashbackRuleResponse(
-                id=str(r.id),
-                card_id=str(r.card_id),
-                category_id=str(r.category_id),
-                cashback_percent=r.cashback_percent,
-                monthly_limit=r.monthly_limit,
-                start_date=r.start_date,
-                end_date=r.end_date,
-            )
-            for r in rules
-        ]
-    )
+    return APIResponse(data=[_rule_response(r) for r in rules])
 
 
 @router.get("/summary", response_model=APIResponse[CashbackSummaryResponse])

@@ -13,7 +13,13 @@ from app.repositories.account import AccountRepository
 from app.repositories.card import CardRepository, CashbackRuleRepository
 from app.repositories.cashback import CashbackAccrualRepository
 from app.repositories.category import CategoryRepository
-from app.schemas.cashback import CardCreate, CashbackRecommendation, CashbackRuleCreate
+from app.repositories.transaction import TransactionRepository
+from app.schemas.cashback import (
+    CardCreate,
+    CashbackRecommendation,
+    CashbackRuleCreate,
+    CashbackRuleUpdate,
+)
 from app.services.audit import AuditService
 from app.services.notification import NotificationService
 
@@ -27,6 +33,7 @@ class CashbackService:
         self.category_repo = CategoryRepository(session)
         self.rule_repo = CashbackRuleRepository(session)
         self.accrual_repo = CashbackAccrualRepository(session)
+        self.tx_repo = TransactionRepository(session)
         self.audit = AuditService(session)
         self.notifications = NotificationService(session)
 
@@ -59,6 +66,7 @@ class CashbackService:
             category_id=category.id,
             cashback_percent=data.cashback_percent,
             monthly_limit=data.monthly_limit,
+            min_purchase_amount=data.min_purchase_amount,
             start_date=data.start_date,
             end_date=data.end_date,
         )
@@ -68,8 +76,86 @@ class CashbackService:
         )
         return rule
 
+    async def update_rule(
+        self,
+        user_id: UUID,
+        card_id: UUID,
+        rule_id: UUID,
+        data: CashbackRuleUpdate,
+        ip: str | None = None,
+    ) -> tuple[CashbackRule, int]:
+        card = await self.card_repo.get_by_id_for_user(card_id, user_id)
+        if card is None:
+            raise NotFoundError("Card not found")
+        rule = await self.rule_repo.get_by_id_for_card(rule_id, card_id)
+        if rule is None:
+            raise NotFoundError("Cashback rule not found")
+        fields_set = data.model_fields_set
+        if "cashback_percent" in fields_set and data.cashback_percent is not None:
+            rule.cashback_percent = data.cashback_percent
+        if "monthly_limit" in fields_set:
+            rule.monthly_limit = data.monthly_limit
+        if "min_purchase_amount" in fields_set:
+            rule.min_purchase_amount = data.min_purchase_amount
+        if "start_date" in fields_set and data.start_date is not None:
+            rule.start_date = data.start_date
+        if "end_date" in fields_set:
+            rule.end_date = data.end_date
+        await self.session.flush()
+
+        recalculated = 0
+        if data.recalculate_existing:
+            recalculated = await self._recalculate_for_rule(user_id, rule)
+
+        await self.audit.log(
+            "update", "cashback_rule", user_id=user_id, entity_id=rule.id, ip_address=ip
+        )
+        return rule, recalculated
+
+    async def _recalculate_for_rule(self, user_id: UUID, rule: CashbackRule) -> int:
+        transactions = await self.tx_repo.list_expenses_for_cashback_recalc(
+            user_id,
+            rule.category_id,
+            rule.card_id,
+            rule.start_date,
+            rule.end_date,
+        )
+        if not transactions:
+            return 0
+        tx_ids = [tx.id for tx in transactions]
+        await self.accrual_repo.delete_for_card_transactions(rule.card_id, tx_ids)
+        await self.session.flush()
+        recalculated = 0
+        for tx in transactions:
+            if not self._transaction_in_rule_period(tx, rule):
+                continue
+            await self.evaluate(
+                user_id,
+                tx,
+                rule.category_id,
+                str(rule.card_id),
+                notify=False,
+            )
+            recalculated += 1
+        return recalculated
+
+    @staticmethod
+    def _transaction_in_rule_period(transaction: Transaction, rule: CashbackRule) -> bool:
+        on_date = transaction.transaction_date
+        if on_date < rule.start_date:
+            return False
+        if rule.end_date is not None and on_date > rule.end_date:
+            return False
+        return True
+
     async def evaluate(
-        self, user_id: UUID, transaction: Transaction, category_id: UUID, card_id: str | None
+        self,
+        user_id: UUID,
+        transaction: Transaction,
+        category_id: UUID,
+        card_id: str | None,
+        *,
+        notify: bool = True,
     ) -> CashbackAccrual | None:
         if transaction.type != TransactionType.EXPENSE:
             return None
@@ -86,6 +172,9 @@ class CashbackService:
         best: tuple[CashbackRule, Card, Decimal] | None = None
         seen_missed_cards: set[UUID] = set()
         for rule, card in rules:
+            min_amt = rule.min_purchase_amount
+            if min_amt is not None and transaction.amount < min_amt:
+                continue
             potential = transaction.amount * rule.cashback_percent / Decimal("100")
             monthly_used = await self.accrual_repo.monthly_total_for_card_category(
                 card.id, category_id, period_month
@@ -113,7 +202,8 @@ class CashbackService:
             status=CashbackAccrualStatus.ACCRUED,
         )
         await self.accrual_repo.create(accrual)
-        await self.notifications.notify_cashback_available(user_id, accrual, card)
+        if notify:
+            await self.notifications.notify_cashback_available(user_id, accrual, card)
         return accrual
 
     async def _record_missed(
@@ -156,5 +246,6 @@ class CashbackService:
                 best_card_id=str(best_card.id),
                 best_card_name=best_card.name,
                 cashback_percent=best_rule.cashback_percent,
+                min_purchase_amount=best_rule.min_purchase_amount,
             )
         ]

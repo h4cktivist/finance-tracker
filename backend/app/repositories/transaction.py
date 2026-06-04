@@ -88,3 +88,26 @@ class TransactionRepository(BaseRepository[Transaction]):
             )
         )
         return float(result.scalar_one())
+
+    async def list_expenses_for_cashback_recalc(
+        self,
+        user_id: UUID,
+        category_id: UUID,
+        card_id: UUID,
+        date_from: date,
+        date_to: date | None,
+    ) -> list[Transaction]:
+        stmt = (
+            self._base_query(user_id)
+            .where(
+                Transaction.type == TransactionType.EXPENSE,
+                Transaction.category_id == category_id,
+                Transaction.transaction_date >= date_from,
+                or_(Transaction.card_id == card_id, Transaction.card_id.is_(None)),
+            )
+            .order_by(Transaction.transaction_date.asc(), Transaction.id.asc())
+        )
+        if date_to is not None:
+            stmt = stmt.where(Transaction.transaction_date <= date_to)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())

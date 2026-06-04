@@ -38,6 +38,14 @@ class CashbackRuleRepository(BaseRepository[CashbackRule]):
         )
         return list(result.scalars().all())
 
+    async def get_by_id_for_card(self, rule_id: UUID, card_id: UUID) -> CashbackRule | None:
+        result = await self.session.execute(
+            select(CashbackRule).where(
+                CashbackRule.id == rule_id, CashbackRule.card_id == card_id
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def find_active_for_category(
         self, user_id: UUID, category_id: UUID, on_date: date
     ) -> list[tuple[CashbackRule, Card]]:

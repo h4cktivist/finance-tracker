@@ -1,99 +1,96 @@
 services:
-  migrate:
-    build: .
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/finance_tracker
-      DATABASE_URL_SYNC: postgresql://postgres:postgres@postgres:5432/finance_tracker
-    depends_on:
-      postgres:
-        condition: service_healthy
-    entrypoint: []
-    command: alembic upgrade head
-    restart: "no"
-
   api:
     build: .
+    restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/finance_tracker
-      DATABASE_URL_SYNC: postgresql://postgres:postgres@postgres:5432/finance_tracker
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-finance_tracker}
+      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-finance_tracker}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
     depends_on:
       postgres:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
       redis:
         condition: service_started
     volumes:
       - .:/app
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    networks:
+      - internal
 
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: finance_tracker
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-finance_tracker}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - internal
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - internal
 
   celery-worker:
     build: .
+    restart: unless-stopped
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/finance_tracker
-      DATABASE_URL_SYNC: postgresql://postgres:postgres@postgres:5432/finance_tracker
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-finance_tracker}
+      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-finance_tracker}
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
       redis:
         condition: service_started
+    volumes:
+      - .:/app
     command: ["celery", "-A", "app.tasks.celery_app", "worker", "--loglevel=info"]
+    networks:
+      - internal
 
   celery-beat:
     build: .
+    restart: unless-stopped
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/finance_tracker
-      DATABASE_URL_SYNC: postgresql://postgres:postgres@postgres:5432/finance_tracker
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-finance_tracker}
+      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-finance_tracker}
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
       redis:
         condition: service_started
+    volumes:
+      - .:/app
     command: ["celery", "-A", "app.tasks.celery_app", "beat", "--loglevel=info"]
+    networks:
+      - internal
 
   test:
     build:
@@ -105,6 +102,12 @@ services:
       PYTHONPATH: /app
     profiles:
       - test
+    networks:
+      - internal
 
 volumes:
   postgres_data:
+
+networks:
+  internal:
+    driver: bridge
