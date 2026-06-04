@@ -6,8 +6,15 @@ from fastapi import APIRouter, Depends
 from app.core.deps import CurrentUser, DbSession, get_client_ip
 from app.core.responses import APIResponse
 from app.repositories.budget import BudgetRepository
-from app.schemas.budget import BudgetCreate, BudgetResponse, BudgetStatusResponse, BudgetUpdate
+from app.schemas.budget import (
+    BudgetCreate,
+    BudgetRecommendationsResponse,
+    BudgetResponse,
+    BudgetStatusResponse,
+    BudgetUpdate,
+)
 from app.services.budget import BudgetService
+from app.services.budget_recommendations import BudgetRecommendationsService
 
 router = APIRouter()
 
@@ -44,6 +51,15 @@ async def list_budgets(user: CurrentUser, db: DbSession) -> APIResponse[list[Bud
     repo = BudgetRepository(db)
     budgets = await repo.list_by_user(user.id)
     return APIResponse(data=[_budget_response(b) for b in budgets])
+
+
+@router.get("/recommendations", response_model=APIResponse[BudgetRecommendationsResponse])
+async def budget_recommendations(
+    user: CurrentUser, db: DbSession
+) -> APIResponse[BudgetRecommendationsResponse]:
+    service = BudgetRecommendationsService(db)
+    data = await service.recommend(user.id)
+    return APIResponse(data=data)
 
 
 @router.get("/{budget_id}/status", response_model=APIResponse[BudgetStatusResponse])

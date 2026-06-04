@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Pencil, Plus, Target, Trash2 } from 'lucide-react'
+import { Lightbulb, Pencil, Plus, Target, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import {
+  useBudgetRecommendations,
   useBudgetStatus,
   useBudgets,
   useCategories,
@@ -12,7 +13,12 @@ import {
   useDeleteBudget,
   useUpdateBudget,
 } from '@/hooks/useQueries'
-import type { Budget, BudgetPeriodType } from '@/lib/types'
+import type {
+  Budget,
+  BudgetPeriodType,
+  BudgetRecommendation,
+  BudgetRecommendations,
+} from '@/lib/types'
 import { Modal } from '@/components/Modal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
@@ -23,6 +29,18 @@ const PERIOD_LABELS: Record<BudgetPeriodType, string> = {
   weekly: 'Неделя',
   monthly: 'Месяц',
   yearly: 'Год',
+}
+
+const REC_ACTION: Record<BudgetRecommendation['recommendation_type'], string> = {
+  create: 'Создать бюджет',
+  increase: 'Повысить лимит',
+  decrease: 'Снизить лимит',
+}
+
+const REC_TITLE: Record<BudgetRecommendation['recommendation_type'], string> = {
+  create: 'Новый бюджет',
+  increase: 'Повысить лимит',
+  decrease: 'Снизить лимит',
 }
 
 const createSchema = z.object({
@@ -40,13 +58,46 @@ export function BudgetsPage() {
   const [editing, setEditing] = useState<Budget | null>(null)
   const [deleting, setDeleting] = useState<Budget | null>(null)
 
+  const [createPrefill, setCreatePrefill] = useState<{
+    category_id: string
+    amount_limit: string
+  } | null>(null)
+  const [suggestedLimit, setSuggestedLimit] = useState<string | undefined>()
+
   const budgets = useBudgets()
+  const recommendations = useBudgetRecommendations()
   const categories = useCategories()
   const create = useCreateBudget()
   const update = useUpdateBudget()
   const remove = useDeleteBudget()
 
   const categoryMap = Object.fromEntries((categories.data ?? []).map((c) => [c.id, c]))
+  const budgetById = Object.fromEntries((budgets.data ?? []).map((b) => [b.id, b]))
+
+  function applyRecommendation(rec: BudgetRecommendation) {
+    setSuggestedLimit(rec.suggested_amount_limit)
+    if (rec.recommendation_type === 'create') {
+      setEditing(null)
+      setCreatePrefill({
+        category_id: rec.category_id,
+        amount_limit: rec.suggested_amount_limit,
+      })
+      setOpen(true)
+      return
+    }
+    const budget = rec.existing_budget_id ? budgetById[rec.existing_budget_id] : null
+    if (!budget) return
+    setCreatePrefill(null)
+    setEditing(budget)
+    setOpen(true)
+  }
+
+  function openNewBudget() {
+    setEditing(null)
+    setCreatePrefill(null)
+    setSuggestedLimit(undefined)
+    setOpen(true)
+  }
 
   async function handleDelete() {
     if (!deleting) return
@@ -63,10 +114,17 @@ export function BudgetsPage() {
     <>
       <div className="row-between page-toolbar">
         <div className="muted">Управляйте лимитами по категориям расходов</div>
-        <button className="btn btn-primary" onClick={() => { setEditing(null); setOpen(true) }}>
+        <button className="btn btn-primary" onClick={openNewBudget}>
           <Plus size={16} /> Новый бюджет
         </button>
       </div>
+
+      <BudgetRecommendationsPanel
+        data={recommendations.data}
+        isLoading={recommendations.isLoading}
+        onApply={applyRecommendation}
+        applying={create.isPending || update.isPending}
+      />
 
       {budgets.isLoading ? (
         <div className="card"><div className="muted">Загрузка…</div></div>
@@ -76,7 +134,11 @@ export function BudgetsPage() {
             title="Нет бюджетов"
             description="Создайте первый бюджет, чтобы контролировать расходы"
             icon={<Target size={36} />}
-            action={<button className="btn btn-primary" onClick={() => { setEditing(null); setOpen(true) }}><Plus size={16} /> Создать</button>}
+            action={
+              <button className="btn btn-primary" onClick={openNewBudget}>
+                <Plus size={16} /> Создать
+              </button>
+            }
           />
         </div>
       ) : (
@@ -86,7 +148,12 @@ export function BudgetsPage() {
               key={b.id}
               budget={b}
               categoryName={b.category_id ? categoryMap[b.category_id]?.name ?? '—' : '—'}
-              onEdit={() => { setEditing(b); setOpen(true) }}
+              onEdit={() => {
+                setCreatePrefill(null)
+                setSuggestedLimit(undefined)
+                setEditing(b)
+                setOpen(true)
+              }}
               onDelete={() => setDeleting(b)}
             />
           ))}
@@ -95,8 +162,14 @@ export function BudgetsPage() {
 
       <BudgetFormModal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false)
+          setCreatePrefill(null)
+          setSuggestedLimit(undefined)
+        }}
         editing={editing}
+        createPrefill={createPrefill}
+        suggestedLimit={suggestedLimit}
         categories={(categories.data ?? []).filter((c) => c.type === 'expense')}
         onSubmit={async (values) => {
           try {
@@ -199,12 +272,125 @@ function BudgetCard({
   )
 }
 
+function BudgetRecommendationsPanel({
+  data,
+  isLoading,
+  onApply,
+  applying,
+}: {
+  data: BudgetRecommendations | undefined
+  isLoading: boolean
+  onApply: (rec: BudgetRecommendation) => void
+  applying: boolean
+}) {
+  if (isLoading) {
+    return (
+      <div className="card">
+        <div className="card-header">
+          <h2><Lightbulb size={18} style={{ verticalAlign: -3, marginRight: 8 }} />Рекомендации по бюджетам</h2>
+        </div>
+        <p className="dim">Анализ трат…</p>
+      </div>
+    )
+  }
+  if (!data || data.items.length === 0) {
+    return (
+      <div className="card">
+        <div className="card-header">
+          <h2><Lightbulb size={18} style={{ verticalAlign: -3, marginRight: 8 }} />Рекомендации по бюджетам</h2>
+        </div>
+        <p className="dim" style={{ fontSize: 13 }}>
+          Недостаточно данных за последние {data?.months_analyzed ?? 3} мес. (нужны регулярные расходы
+          от 500 ₽ и минимум 2 операции по категории).
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card">
+      <div className="card-header">
+        <h2><Lightbulb size={18} style={{ verticalAlign: -3, marginRight: 8 }} />Рекомендации по бюджетам</h2>
+        <span className="dim" style={{ fontSize: 13 }}>
+          На основе трат за {data.months_analyzed} мес., без ИИ
+        </span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {data.items.map((rec) => {
+          const variant =
+            rec.recommendation_type === 'create'
+              ? 'info'
+              : rec.recommendation_type === 'increase'
+                ? 'warning'
+                : 'success'
+          return (
+            <div
+              key={`${rec.category_id}-${rec.recommendation_type}`}
+              style={{
+                padding: 14,
+                borderRadius: 12,
+                border: '1px solid var(--border)',
+                background: 'rgba(11,16,32,0.35)',
+              }}
+            >
+              <div className="row-between" style={{ alignItems: 'flex-start', gap: 12 }}>
+                <div>
+                  <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                    <strong>{rec.category_name}</strong>
+                    <span className={`badge badge-${variant}`}>{REC_TITLE[rec.recommendation_type]}</span>
+                  </div>
+                  <p className="dim" style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.45 }}>
+                    {rec.reason}
+                  </p>
+                  <div className="dim" style={{ marginTop: 8, fontSize: 12 }}>
+                    Среднее {formatMoney(rec.avg_monthly_spent)}/мес. · пик {formatMoney(rec.max_monthly_spent)}
+                    {' · '}{rec.transaction_count} операций
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div className="mono" style={{ fontSize: 18, fontWeight: 700 }}>
+                    {formatMoney(rec.suggested_amount_limit)}
+                  </div>
+                  <div className="dim" style={{ fontSize: 12 }}>лимит / мес.</div>
+                  {rec.current_amount_limit && (
+                    <div className="dim" style={{ fontSize: 12, marginTop: 4 }}>
+                      сейчас {formatMoney(rec.current_amount_limit)}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ marginTop: 10 }}
+                    disabled={applying}
+                    onClick={() => onApply(rec)}
+                  >
+                    {REC_ACTION[rec.recommendation_type]}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function BudgetFormModal({
-  open, onClose, editing, categories, onSubmit, submitting,
+  open,
+  onClose,
+  editing,
+  createPrefill,
+  suggestedLimit,
+  categories,
+  onSubmit,
+  submitting,
 }: {
   open: boolean
   onClose: () => void
   editing: Budget | null
+  createPrefill: { category_id: string; amount_limit: string } | null
+  suggestedLimit?: string
   categories: Array<{ id: string; name: string }>
   onSubmit: (values: FormValues) => void
   submitting: boolean
@@ -216,20 +402,29 @@ function BudgetFormModal({
     values: editing
       ? {
           category_id: editing.category_id,
-          amount_limit: editing.amount_limit,
+          amount_limit: suggestedLimit ?? editing.amount_limit,
           period_type: editing.period_type,
           start_date: editing.start_date,
           end_date: editing.end_date ?? '',
           rollover_enabled: editing.rollover_enabled,
         }
-      : {
-          category_id: '',
-          amount_limit: '',
-          period_type: 'monthly',
-          start_date: todayIso(),
-          end_date: '',
-          rollover_enabled: false,
-        },
+      : createPrefill
+        ? {
+            category_id: createPrefill.category_id,
+            amount_limit: createPrefill.amount_limit,
+            period_type: 'monthly',
+            start_date: todayIso(),
+            end_date: '',
+            rollover_enabled: false,
+          }
+        : {
+            category_id: '',
+            amount_limit: '',
+            period_type: 'monthly',
+            start_date: todayIso(),
+            end_date: '',
+            rollover_enabled: false,
+          },
   })
 
   return (

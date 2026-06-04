@@ -193,6 +193,30 @@ export type BudgetStatus = {
   is_exceeded: boolean
 }
 
+export type BudgetRecommendationType = 'create' | 'increase' | 'decrease'
+
+export type BudgetRecommendation = {
+  category_id: string
+  category_name: string
+  recommendation_type: BudgetRecommendationType
+  suggested_amount_limit: string
+  suggested_period_type: BudgetPeriodType
+  avg_monthly_spent: string
+  max_monthly_spent: string
+  transaction_count: number
+  months_with_activity: number
+  existing_budget_id: string | null
+  current_amount_limit: string | null
+  reason: string
+}
+
+export type BudgetRecommendations = {
+  items: BudgetRecommendation[]
+  period_from: string
+  period_to: string
+  months_analyzed: number
+}
+
 export type RecurringFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
 
 export type Recurring = {

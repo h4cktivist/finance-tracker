@@ -6,6 +6,7 @@ import type {
   AccountUpdate,
   Budget,
   BudgetCreate,
+  BudgetRecommendations,
   BudgetStatus,
   BudgetUpdate,
   Card,
@@ -249,6 +250,15 @@ export function useBudgets() {
   return useQuery({ queryKey: budgetsKey, queryFn: () => api.get<Budget[]>('/budgets') })
 }
 
+export const budgetRecommendationsKey = ['budgets', 'recommendations'] as const
+
+export function useBudgetRecommendations() {
+  return useQuery({
+    queryKey: budgetRecommendationsKey,
+    queryFn: () => api.get<BudgetRecommendations>('/budgets/recommendations'),
+  })
+}
+
 export function useBudgetStatus(id: string | undefined) {
   return useQuery({
     queryKey: ['budgets', id, 'status'],
@@ -261,7 +271,10 @@ export function useCreateBudget() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: BudgetCreate) => api.post<Budget>('/budgets', data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: budgetsKey }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: budgetsKey })
+      qc.invalidateQueries({ queryKey: budgetRecommendationsKey })
+    },
   })
 }
 
@@ -270,7 +283,10 @@ export function useUpdateBudget() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: BudgetUpdate }) =>
       api.patch<Budget>(`/budgets/${id}`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: budgetsKey }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: budgetsKey })
+      qc.invalidateQueries({ queryKey: budgetRecommendationsKey })
+    },
   })
 }
 
@@ -278,7 +294,10 @@ export function useDeleteBudget() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api.delete<null>(`/budgets/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: budgetsKey }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: budgetsKey })
+      qc.invalidateQueries({ queryKey: budgetRecommendationsKey })
+    },
   })
 }
 

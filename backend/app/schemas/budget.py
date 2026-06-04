@@ -42,3 +42,25 @@ class BudgetStatusResponse(BaseModel):
     percent_used: float
     days_until_exceed: int | None
     is_exceeded: bool
+
+
+class BudgetRecommendationItem(BaseModel):
+    category_id: str
+    category_name: str
+    recommendation_type: str
+    suggested_amount_limit: Decimal
+    suggested_period_type: BudgetPeriodType
+    avg_monthly_spent: Decimal
+    max_monthly_spent: Decimal
+    transaction_count: int
+    months_with_activity: int
+    existing_budget_id: str | None
+    current_amount_limit: Decimal | None
+    reason: str
+
+
+class BudgetRecommendationsResponse(BaseModel):
+    items: list[BudgetRecommendationItem]
+    period_from: date
+    period_to: date
+    months_analyzed: int
