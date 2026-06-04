@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     accounts,
+    ai,
     analytics,
     auth,
     budgets,
@@ -25,4 +26,5 @@ api_router.include_router(recurring.router, prefix="/recurring", tags=["recurrin
 api_router.include_router(cashback.router, prefix="/cashback", tags=["cashback"])
 api_router.include_router(goals.router, prefix="/goals", tags=["goals"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(ai.router, prefix="/ai", tags=["ai"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])

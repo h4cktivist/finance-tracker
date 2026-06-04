@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     budget_warning_threshold: float = 0.8
     api_v1_prefix: str = "/api/v1"
 
+    openrouter_api_key: str | None = Field(default=None, validation_alias="OPENROUTER_API_KEY")
+    openrouter_model: str = Field(
+        default="google/gemma-4-31b-it:free",
+        validation_alias="OPENROUTER_MODEL",
+    )
+
     @model_validator(mode="after")
     def _resolve_database_urls(self):
         if self.database_url:

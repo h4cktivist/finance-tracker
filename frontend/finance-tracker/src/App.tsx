@@ -17,6 +17,7 @@ import { CashbackPage } from './pages/CashbackPage'
 import { GoalsPage } from './pages/GoalsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
+import { RecommendationsPage } from './pages/RecommendationsPage'
 
 function Protected({ children }: { children: JSX.Element }) {
   const { isAuthenticated, isInitializing } = useAuth()
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="/cashback" element={<CashbackPage />} />
         <Route path="/goals" element={<GoalsPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/recommendations" element={<RecommendationsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
 

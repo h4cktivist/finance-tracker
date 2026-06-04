@@ -28,6 +28,7 @@ import type {
   GoalProgress,
   GoalUpdate,
   Heatmap,
+  AIRecommendations,
   AppNotification,
   Paginated,
   Ratios,
@@ -479,6 +480,17 @@ export function useRatios(excludeInvestments = false) {
   return useQuery({
     queryKey: ['ratios', excludeInvestments],
     queryFn: () => api.get<Ratios>('/analytics/ratios', analyticsParams(excludeInvestments)),
+  })
+}
+
+// === AI recommendations ===
+export function useAiRecommendations() {
+  return useMutation({
+    mutationFn: (month: string) =>
+      api.post<AIRecommendations>(
+        `/ai/recommendations?month=${encodeURIComponent(month)}`,
+        {},
+      ),
   })
 }
 

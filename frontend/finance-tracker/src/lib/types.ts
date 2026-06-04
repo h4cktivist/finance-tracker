@@ -414,3 +414,8 @@ export type AppNotification = {
   read_at: string | null
   created_at: string
 }
+
+export type AIRecommendations = {
+  month: string
+  content: string
+}

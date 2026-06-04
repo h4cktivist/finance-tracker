@@ -12,6 +12,7 @@ import {
   Receipt,
   RefreshCw,
   Tag,
+  Sparkles,
   Target,
   Wallet,
   Wallet2,
@@ -48,6 +49,7 @@ const SECTIONS: Array<{
     title: 'Прочее',
     items: [
       { to: '/analytics', label: 'Аналитика', icon: BarChart3 },
+      { to: '/recommendations', label: 'ИИ-советы', icon: Sparkles },
       { to: '/notifications', label: 'Уведомления', icon: Bell },
     ],
   },
@@ -64,6 +66,7 @@ const TITLES: Record<string, string> = {
   '/cashback': 'Кэшбэк',
   '/goals': 'Цели',
   '/analytics': 'Аналитика',
+  '/recommendations': 'ИИ-советы',
   '/notifications': 'Уведомления',
 }
 
