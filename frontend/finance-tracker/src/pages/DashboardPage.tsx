@@ -109,33 +109,35 @@ export function DashboardPage() {
           {expensePie.length === 0 ? (
             <div className="empty"><p>Нет данных</p></div>
           ) : (
-            <div className="chart-area">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={expensePie}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                  >
-                    {expensePie.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(v) => formatMoney(Number(v))}
-                    contentStyle={{
-                      background: '#141c3c',
-                      border: '1px solid rgba(120,134,200,0.28)',
-                      borderRadius: 10,
-                    }}
-                    labelStyle={{ color: '#e8ecff' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="pie-legend" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+            <div className="pie-chart-block">
+              <div className="chart-area chart-area--pie">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={expensePie}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                    >
+                      {expensePie.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v) => formatMoney(Number(v))}
+                      contentStyle={{
+                        background: '#141c3c',
+                        border: '1px solid rgba(120,134,200,0.28)',
+                        borderRadius: 10,
+                      }}
+                      labelStyle={{ color: '#e8ecff' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="pie-legend">
                 {expensePie.map((entry, i) => (
                   <span key={entry.name} className="pill">
                     <span className="color-swatch" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />

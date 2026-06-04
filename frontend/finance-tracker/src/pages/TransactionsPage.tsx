@@ -257,14 +257,14 @@ export function TransactionsPage() {
               <thead>
                 <tr>
                   <th>Дата</th>
-                  <th>Тип</th>
-                  <th>Описание</th>
                   <th>Категория</th>
-                  <th>Счёт</th>
-                  <th>Теги</th>
+                  <th>Описание</th>
+                  <th className="col-desktop-only">Тип</th>
+                  <th className="col-desktop-only">Счёт</th>
+                  <th className="col-desktop-only">Теги</th>
                   <th style={{ textAlign: 'right' }}>Сумма</th>
-                  <th style={{ textAlign: 'right' }}>Кэшбэк</th>
-                  <th></th>
+                  <th className="col-desktop-only" style={{ textAlign: 'right' }}>Кэшбэк</th>
+                  <th className="col-actions" />
                 </tr>
               </thead>
               <tbody>
@@ -277,25 +277,25 @@ export function TransactionsPage() {
                       className={isMobileList ? 'transaction-row-clickable' : undefined}
                       onClick={isMobileList ? () => openDetail(t) : undefined}
                     >
-                      <td className="mono">{formatDate(t.transaction_date)}</td>
-                      <td>{renderTypeBadge(t.type)}</td>
-                      <td>
-                        <div>{t.description || <span className="dim">—</span>}</div>
-                        {t.merchant_name && <div className="dim">{t.merchant_name}</div>}
-                        {t.correction_of_id && <span className="badge badge-warning" style={{ marginTop: 4 }}>Исправление</span>}
-                      </td>
-                      <td>
+                      <td className="mono tx-col-date">{formatDate(t.transaction_date)}</td>
+                      <td className="tx-col-category">
                         {cat ? (
-                          <span className="row" style={{ gap: 6 }}>
+                          <span className="row tx-category-label" style={{ gap: 6 }}>
                             {cat.color && <span className="color-swatch" style={{ background: cat.color, margin: 0 }} />}
-                            {cat.name}
+                            <span>{cat.name}</span>
                           </span>
                         ) : (
                           <span className="dim">—</span>
                         )}
                       </td>
-                      <td>{acc?.name ?? <span className="dim">—</span>}</td>
-                      <td>
+                      <td className="tx-col-description">
+                        <div>{t.description || <span className="dim">—</span>}</div>
+                        {t.merchant_name && <div className="dim">{t.merchant_name}</div>}
+                        {t.correction_of_id && <span className="badge badge-warning" style={{ marginTop: 4 }}>Исправление</span>}
+                      </td>
+                      <td className="col-desktop-only">{renderTypeBadge(t.type)}</td>
+                      <td className="col-desktop-only">{acc?.name ?? <span className="dim">—</span>}</td>
+                      <td className="col-desktop-only">
                         {t.tag_ids.length === 0 ? (
                           <span className="dim">—</span>
                         ) : (
@@ -312,20 +312,20 @@ export function TransactionsPage() {
                           </div>
                         )}
                       </td>
-                      <td className="mono" style={{ textAlign: 'right', fontWeight: 600 }}>
+                      <td className="mono tx-col-amount" style={{ textAlign: 'right', fontWeight: 600 }}>
                         <span className={t.type === 'income' ? 'value-positive' : t.type === 'expense' ? 'value-negative' : ''}>
                           {t.type === 'expense' ? '−' : t.type === 'income' ? '+' : ''}
                           {formatMoney(t.amount)}
                         </span>
                       </td>
-                      <td className="mono" style={{ textAlign: 'right' }}>
+                      <td className="mono col-desktop-only" style={{ textAlign: 'right' }}>
                         {t.type === 'expense' && t.cashback_amount && Number(t.cashback_amount) > 0 ? (
                           <span className="value-positive">+{formatMoney(t.cashback_amount)}</span>
                         ) : (
                           <span className="dim">—</span>
                         )}
                       </td>
-                      <td onClick={(e) => e.stopPropagation()}>
+                      <td className="col-actions" onClick={(e) => e.stopPropagation()}>
                         <div className="actions">
                           <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setEditing(t)} title="Редактировать">
                             <Pencil size={14} />

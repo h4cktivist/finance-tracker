@@ -691,6 +691,27 @@ p { margin: 0; }
   min-height: 200px;
 }
 
+.pie-chart-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.chart-area--pie {
+  flex-shrink: 0;
+}
+.pie-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.pie-legend .pill {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .date-range-toolbar {
   display: flex;
   flex-direction: column;
@@ -1059,15 +1080,38 @@ p { margin: 0; }
     background: rgba(124, 92, 255, 0.08);
   }
 
-  .table--transactions th:nth-child(4),
-  .table--transactions td:nth-child(4),
-  .table--transactions th:nth-child(5),
-  .table--transactions td:nth-child(5),
-  .table--transactions th:nth-child(6),
-  .table--transactions td:nth-child(6),
-  .table--transactions th:nth-child(8),
-  .table--transactions td:nth-child(8) {
+  .table--transactions .col-desktop-only,
+  .table--transactions .col-actions {
     display: none;
+  }
+
+  .table--transactions .tx-col-date {
+    white-space: nowrap;
+    width: 1%;
+  }
+  .table--transactions .tx-col-category {
+    max-width: 88px;
+    width: 88px;
+  }
+  .table--transactions .tx-category-label {
+    min-width: 0;
+  }
+  .table--transactions .tx-category-label > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .table--transactions .tx-col-description {
+    min-width: 0;
+  }
+  .table--transactions .tx-col-description > div:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .table--transactions .tx-col-amount {
+    white-space: nowrap;
+    width: 1%;
   }
 
   .table--cashback-rules th:nth-child(3),
@@ -1132,11 +1176,6 @@ p { margin: 0; }
   }
   .grid-3 {
     grid-template-columns: 1fr;
-  }
-
-  .table--transactions th:nth-child(2),
-  .table--transactions td:nth-child(2) {
-    display: none;
   }
 
   .table th, .table td {
