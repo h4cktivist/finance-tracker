@@ -712,6 +712,10 @@ p { margin: 0; }
   white-space: nowrap;
 }
 
+.tx-category-icon {
+  display: none;
+}
+
 .date-range-toolbar {
   display: flex;
   flex-direction: column;
@@ -1090,16 +1094,26 @@ p { margin: 0; }
     width: 1%;
   }
   .table--transactions .tx-col-category {
-    max-width: 88px;
-    width: 88px;
+    width: 36px;
+    max-width: 36px;
+    padding-left: 4px;
+    padding-right: 4px;
+    text-align: center;
   }
-  .table--transactions .tx-category-label {
-    min-width: 0;
+  .table--transactions .tx-category-icon {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin: 0 auto;
+    border-radius: 8px;
+    background: rgba(120, 134, 200, 0.1);
+    color: var(--text-muted);
   }
-  .table--transactions .tx-category-label > span:last-child {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .table--transactions .tx-category-icon .color-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
   }
   .table--transactions .tx-col-description {
     min-width: 0;

@@ -17,6 +17,7 @@ import {
   Search,
   Trash2,
   X,
+  Folder,
 } from 'lucide-react'
 import {
   useAccounts,
@@ -31,10 +32,12 @@ import {
 } from '@/hooks/useQueries'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import type {
+  Category,
   Transaction,
   TransactionCreate,
   TransactionType,
 } from '@/lib/types'
+import { getIcon } from '@/lib/icons'
 import { Modal } from '@/components/Modal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
@@ -280,10 +283,25 @@ export function TransactionsPage() {
                       <td className="mono tx-col-date">{formatDate(t.transaction_date)}</td>
                       <td className="tx-col-category">
                         {cat ? (
-                          <span className="row tx-category-label" style={{ gap: 6 }}>
-                            {cat.color && <span className="color-swatch" style={{ background: cat.color, margin: 0 }} />}
-                            <span>{cat.name}</span>
-                          </span>
+                          <>
+                            <span
+                              className="tx-category-icon"
+                              title={cat.name}
+                              aria-label={cat.name}
+                              style={{
+                                background: cat.color ? `${cat.color}22` : undefined,
+                                color: cat.color ?? undefined,
+                              }}
+                            >
+                              {renderCategoryIcon(cat)}
+                            </span>
+                            <span className="tx-category-text col-desktop-only row" style={{ gap: 6 }}>
+                              {cat.color && (
+                                <span className="color-swatch" style={{ background: cat.color, margin: 0 }} />
+                              )}
+                              <span>{cat.name}</span>
+                            </span>
+                          </>
                         ) : (
                           <span className="dim">—</span>
                         )}
@@ -448,6 +466,15 @@ export function TransactionsPage() {
       />
     </>
   )
+}
+
+function renderCategoryIcon(cat: Category) {
+  const Icon = getIcon(cat.icon)
+  if (Icon) return <Icon size={14} />
+  if (cat.color) {
+    return <span className="color-swatch" style={{ background: cat.color, margin: 0, width: 12, height: 12 }} />
+  }
+  return <Folder size={14} />
 }
 
 function renderTypeBadge(type: TransactionType) {
