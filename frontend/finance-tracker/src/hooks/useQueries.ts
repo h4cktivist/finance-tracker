@@ -23,6 +23,7 @@ import type {
   CategoryUpdate,
   CorrectionCreate,
   Dashboard,
+  Forecast,
   Goal,
   GoalCreate,
   GoalProgress,
@@ -480,6 +481,13 @@ export function useRatios(excludeInvestments = false) {
   return useQuery({
     queryKey: ['ratios', excludeInvestments],
     queryFn: () => api.get<Ratios>('/analytics/ratios', analyticsParams(excludeInvestments)),
+  })
+}
+
+export function useForecast(excludeInvestments = false) {
+  return useQuery({
+    queryKey: ['forecast', excludeInvestments],
+    queryFn: () => api.get<Forecast>('/analytics/forecast', analyticsParams(excludeInvestments)),
   })
 }
 

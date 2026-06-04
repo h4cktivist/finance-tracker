@@ -13,8 +13,9 @@ import {
 } from 'recharts'
 import { ExcludeInvestmentsToggle } from '@/components/ExcludeInvestmentsToggle'
 import { useAnalyticsPreferences } from '@/context/AnalyticsPreferencesContext'
-import { useHeatmap, useRatios, useStatistics, useTrends } from '@/hooks/useQueries'
+import { useForecast, useHeatmap, useRatios, useStatistics, useTrends } from '@/hooks/useQueries'
 import { formatMoney, toIsoDate } from '@/lib/format'
+import type { Forecast } from '@/lib/types'
 import { Heatmap } from '@/components/Heatmap'
 import { IncomeExpenseTrendCharts } from '@/components/IncomeExpenseTrendCharts'
 
@@ -34,6 +35,7 @@ export function AnalyticsPage() {
   const heat = useHeatmap(range.from, range.to, excludeInvestments)
   const trends = useTrends(range.from, range.to, excludeInvestments)
   const ratios = useRatios(excludeInvestments)
+  const forecast = useForecast(excludeInvestments)
 
   const expenses = (stats.data?.top_expense_categories ?? []).map((c) => ({
     name: c.category_name,
@@ -212,7 +214,85 @@ export function AnalyticsPage() {
           />
         </div>
       </div>
+
+      <ForecastCard data={forecast.data} isLoading={forecast.isLoading} error={forecast.error} />
     </>
+  )
+}
+
+const CONFIDENCE_LABEL: Record<string, string> = {
+  high: 'высокая',
+  medium: 'средняя',
+  low: 'низкая',
+}
+
+function formatForecastMonth(ym: string): string {
+  const [y, m] = ym.split('-').map(Number)
+  const names = [
+    'январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+    'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь',
+  ]
+  return `${names[m - 1]} ${y}`
+}
+
+function ForecastCard({
+  data,
+  isLoading,
+  error,
+}: {
+  data: Forecast | undefined
+  isLoading: boolean
+  error: Error | null
+}) {
+  if (isLoading) {
+    return (
+      <div className="card">
+        <div className="card-header">
+          <h2>Прогноз на следующий месяц</h2>
+        </div>
+        <p className="dim">Загрузка…</p>
+      </div>
+    )
+  }
+  if (error || !data) {
+    return null
+  }
+
+  const cf = Number(data.cashflow)
+  return (
+    <div className="card">
+      <div className="card-header">
+        <h2>Прогноз на {formatForecastMonth(data.target_month)}</h2>
+        <span className={`badge badge-${data.confidence === 'high' ? 'success' : data.confidence === 'medium' ? 'warning' : 'danger'}`}>
+          Уверенность: {CONFIDENCE_LABEL[data.confidence] ?? data.confidence}
+        </span>
+      </div>
+      <p className="dim" style={{ marginBottom: 16, fontSize: 13 }}>
+        Повторяющиеся операции + среднее переменной части за последние {data.months_used} мес.
+      </p>
+      <section className="kpi-grid">
+        <div className="kpi">
+          <span className="label">Доход</span>
+          <span className="value mono value-positive">{formatMoney(data.income)}</span>
+          <span className="dim" style={{ fontSize: 12 }}>
+            повторяющиеся {formatMoney(data.income_breakdown.recurring)}
+          </span>
+        </div>
+        <div className="kpi">
+          <span className="label">Расход</span>
+          <span className="value mono value-negative">{formatMoney(data.expenses)}</span>
+          <span className="dim" style={{ fontSize: 12 }}>
+            повторяющиеся {formatMoney(data.expenses_breakdown.recurring)}
+          </span>
+        </div>
+        <div className="kpi">
+          <span className="label">Денежный поток (FCF)</span>
+          <span className={`value mono ${cf >= 0 ? 'value-positive' : 'value-negative'}`}>
+            {formatMoney(data.cashflow)}
+          </span>
+        </div>
+      </section>
+    </div>
   )
 }
 

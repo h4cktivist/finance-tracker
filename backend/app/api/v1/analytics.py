@@ -6,12 +6,14 @@ from app.core.deps import CurrentUser, DbSession
 from app.core.responses import APIResponse
 from app.schemas.analytics import (
     DashboardResponse,
+    ForecastResponse,
     HeatmapResponse,
     RatiosResponse,
     StatisticsResponse,
     TrendsResponse,
 )
 from app.services.analytics import AnalyticsService
+from app.services.forecast import ForecastService
 
 router = APIRouter()
 
@@ -79,5 +81,19 @@ async def trends(
     service = AnalyticsService(db)
     data = await service.trends(
         user.id, date_from, date_to, exclude_investments=exclude_investments
+    )
+    return APIResponse(data=data)
+
+
+@router.get("/forecast", response_model=APIResponse[ForecastResponse])
+async def forecast(
+    user: CurrentUser,
+    db: DbSession,
+    month: str | None = Query(None, description="Целевой месяц YYYY-MM (по умолчанию — следующий)"),
+    exclude_investments: bool = Query(False),
+) -> APIResponse[ForecastResponse]:
+    service = ForecastService(db)
+    data = await service.forecast(
+        user.id, month=month, exclude_investments=exclude_investments
     )
     return APIResponse(data=data)

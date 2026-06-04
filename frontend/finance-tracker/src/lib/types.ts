@@ -398,6 +398,24 @@ export type Trends = {
   points: TrendPoint[]
 }
 
+export type ForecastBreakdown = {
+  recurring: string
+  trend: string
+}
+
+export type ForecastConfidence = 'low' | 'medium' | 'high'
+
+export type Forecast = {
+  target_month: string
+  income: string
+  expenses: string
+  cashflow: string
+  income_breakdown: ForecastBreakdown
+  expenses_breakdown: ForecastBreakdown
+  confidence: ForecastConfidence
+  months_used: number
+}
+
 export type NotificationType =
   | 'budget_warning'
   | 'budget_exceeded'

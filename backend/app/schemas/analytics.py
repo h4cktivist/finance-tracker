@@ -51,3 +51,19 @@ class TrendPoint(BaseModel):
 
 class TrendsResponse(BaseModel):
     points: list[TrendPoint]
+
+
+class ForecastBreakdown(BaseModel):
+    recurring: Decimal
+    trend: Decimal
+
+
+class ForecastResponse(BaseModel):
+    target_month: str
+    income: Decimal
+    expenses: Decimal
+    cashflow: Decimal
+    income_breakdown: ForecastBreakdown
+    expenses_breakdown: ForecastBreakdown
+    confidence: str
+    months_used: int
