@@ -61,6 +61,10 @@ class TransactionResponse(BaseModel):
         default=None,
         description="Начисленный кэшбэк (сумма accrued); только для расходов.",
     )
+    cashback_is_manual: bool | None = Field(
+        default=None,
+        description="Кэшбэк задан вручную (не пересчитывается автоматически).",
+    )
     created_at: datetime
     updated_at: datetime
     model_config = {"from_attributes": True}

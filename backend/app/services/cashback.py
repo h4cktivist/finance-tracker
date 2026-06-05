@@ -2,10 +2,9 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import NotFoundError, ValidationError
 from app.models.card import Card
 from app.models.cashback import CashbackAccrual, CashbackAccrualStatus, CashbackRule
 from app.models.transaction import Transaction, TransactionType
@@ -123,7 +122,9 @@ class CashbackService:
         if not transactions:
             return 0
         tx_ids = [tx.id for tx in transactions]
-        await self.accrual_repo.delete_for_card_transactions(rule.card_id, tx_ids)
+        await self.accrual_repo.delete_for_card_transactions(
+            rule.card_id, tx_ids, auto_only=True
+        )
         await self.session.flush()
         recalculated = 0
         for tx in transactions:
@@ -172,6 +173,11 @@ class CashbackService:
         best: tuple[CashbackRule, Card, Decimal] | None = None
         seen_missed_cards: set[UUID] = set()
         for rule, card in rules:
+            existing = await self.accrual_repo.get_for_transaction_card(
+                transaction.id, card.id
+            )
+            if existing is not None and existing.rule_id is None:
+                continue
             min_amt = rule.min_purchase_amount
             if min_amt is not None and transaction.amount < min_amt:
                 continue
@@ -192,6 +198,9 @@ class CashbackService:
         if best is None:
             return None
         rule, card, amount = best
+        manual = await self.accrual_repo.get_for_transaction_card(transaction.id, card.id)
+        if manual is not None and manual.rule_id is None:
+            return manual
         accrual = CashbackAccrual(
             user_id=user_id,
             transaction_id=transaction.id,
@@ -214,12 +223,8 @@ class CashbackService:
         rule: CashbackRule,
         period_month: str,
     ) -> None:
-        existing = await self.session.execute(
-            select(CashbackAccrual.id).where(
-                CashbackAccrual.transaction_id == transaction.id, CashbackAccrual.card_id == card.id
-            )
-        )
-        if existing.scalar_one_or_none() is not None:
+        existing = await self.accrual_repo.get_for_transaction_card(transaction.id, card.id)
+        if existing is not None:
             return
         missed_amount = transaction.amount * rule.cashback_percent / Decimal("100")
         accrual = CashbackAccrual(
@@ -232,6 +237,89 @@ class CashbackService:
             status=CashbackAccrualStatus.MISSED,
         )
         await self.accrual_repo.create(accrual)
+
+    async def set_manual_cashback(
+        self,
+        user_id: UUID,
+        transaction_id: UUID,
+        amount: Decimal,
+        card_id: UUID | None = None,
+        ip: str | None = None,
+    ) -> CashbackAccrual | None:
+        tx = await self.tx_repo.get_by_id_for_user(transaction_id, user_id)
+        if tx is None:
+            raise NotFoundError("Transaction not found")
+        if tx.type != TransactionType.EXPENSE:
+            raise ValidationError("Cashback only applies to expense transactions")
+
+        resolved_card_id = card_id or tx.card_id
+        if resolved_card_id is None:
+            raise ValidationError("card_id is required when transaction has no card")
+
+        card = await self.card_repo.get_by_id_for_user(resolved_card_id, user_id)
+        if card is None:
+            raise NotFoundError("Card not found")
+
+        if amount <= 0:
+            await self.accrual_repo.delete_for_transaction(transaction_id, user_id)
+            await self.audit.log(
+                "delete",
+                "cashback_accrual",
+                user_id=user_id,
+                entity_id=transaction_id,
+                ip_address=ip,
+            )
+            return None
+
+        period_month = tx.transaction_date.strftime("%Y-%m")
+        existing = await self.accrual_repo.get_for_transaction_card(
+            transaction_id, resolved_card_id
+        )
+        if existing is not None:
+            existing.amount = amount
+            existing.rule_id = None
+            existing.status = CashbackAccrualStatus.ACCRUED
+            existing.period_month = period_month
+            await self.session.flush()
+            accrual = existing
+            action = "update"
+        else:
+            accrual = CashbackAccrual(
+                user_id=user_id,
+                transaction_id=transaction_id,
+                card_id=resolved_card_id,
+                rule_id=None,
+                amount=amount,
+                period_month=period_month,
+                status=CashbackAccrualStatus.ACCRUED,
+            )
+            await self.accrual_repo.create(accrual)
+            action = "create"
+
+        await self.audit.log(
+            action,
+            "cashback_accrual",
+            user_id=user_id,
+            entity_id=accrual.id,
+            payload={"amount": str(amount), "manual": True},
+            ip_address=ip,
+        )
+        return accrual
+
+    async def delete_cashback(
+        self, user_id: UUID, transaction_id: UUID, ip: str | None = None
+    ) -> None:
+        tx = await self.tx_repo.get_by_id_for_user(transaction_id, user_id)
+        if tx is None:
+            raise NotFoundError("Transaction not found")
+        await self.accrual_repo.delete_for_transaction(transaction_id, user_id)
+        await self.audit.log(
+            "delete",
+            "cashback_accrual",
+            user_id=user_id,
+            entity_id=transaction_id,
+            ip_address=ip,
+        )
 
     async def get_recommendations(
         self, user_id: UUID, category_id: UUID

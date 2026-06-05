@@ -89,4 +89,13 @@ class CashbackAccrualResponse(BaseModel):
     amount: Decimal
     period_month: str
     status: CashbackAccrualStatus
+    is_manual: bool = False
     model_config = {"from_attributes": True}
+
+
+class CashbackManualSet(BaseModel):
+    amount: Decimal = Field(ge=0, description="Сумма кэшбэка; 0 — удалить начисление.")
+    card_id: str | None = Field(
+        default=None,
+        description="Карта для начисления; если не указана — карта из транзакции.",
+    )

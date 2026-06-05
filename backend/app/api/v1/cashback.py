@@ -146,6 +146,7 @@ async def missed_cashback(user: CurrentUser, db: DbSession) -> APIResponse:
                 amount=a.amount,
                 period_month=a.period_month,
                 status=a.status,
+                is_manual=a.rule_id is None,
             )
             for a in accruals
         ]
