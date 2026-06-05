@@ -114,6 +114,7 @@ export type Transaction = {
   card_id: string | null
   tag_ids: string[]
   cashback_amount: string | null
+  cashback_is_manual: boolean | null
   created_at: string
   updated_at: string
 }
@@ -325,7 +326,13 @@ export type CashbackAccrual = {
   card_id: string
   amount: string
   period_month: string
-  status: 'pending' | 'confirmed' | 'missed' | 'cancelled'
+  status: 'accrued' | 'missed'
+  is_manual: boolean
+}
+
+export type CashbackManualSet = {
+  amount: string | number
+  card_id?: string | null
 }
 
 export type GoalStatus = 'active' | 'completed' | 'cancelled'

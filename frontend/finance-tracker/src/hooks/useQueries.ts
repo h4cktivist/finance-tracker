@@ -12,6 +12,7 @@ import type {
   Card,
   CardCreate,
   CashbackAccrual,
+  CashbackManualSet,
   CashbackRecommendation,
   CashbackRule,
   CashbackRuleCreate,
@@ -225,6 +226,37 @@ export function useDeleteTransaction() {
       qc.invalidateQueries({ queryKey: accountsKey })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
       qc.invalidateQueries({ queryKey: ['goals'] })
+    },
+  })
+}
+
+export function useSetTransactionCashback() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      transactionId,
+      data,
+    }: {
+      transactionId: string
+      data: CashbackManualSet
+    }) => api.put<CashbackAccrual | null>(`/transactions/${transactionId}/cashback`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['cashback'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+}
+
+export function useDeleteTransactionCashback() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (transactionId: string) =>
+      api.delete<null>(`/transactions/${transactionId}/cashback`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['cashback'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }

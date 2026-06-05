@@ -30,7 +30,6 @@ import {
   useTransactions,
   useUpdateTransaction,
 } from '@/hooks/useQueries'
-import { useMediaQuery } from '@/hooks/useMediaQuery'
 import type {
   Category,
   Transaction,
@@ -78,7 +77,6 @@ export function TransactionsPage() {
   const [correcting, setCorrecting] = useState<Transaction | null>(null)
   const [deleting, setDeleting] = useState<Transaction | null>(null)
   const [detailTx, setDetailTx] = useState<Transaction | null>(null)
-  const isMobileList = useMediaQuery('(max-width: 900px)')
 
   const queryFilters = useMemo(
     () => ({ ...filters, search: search || undefined, page, page_size: 20 }),
@@ -114,7 +112,6 @@ export function TransactionsPage() {
   )
 
   function openDetail(t: Transaction) {
-    if (!isMobileList) return
     setDetailTx(t)
   }
 
@@ -277,8 +274,8 @@ export function TransactionsPage() {
                   return (
                     <tr
                       key={t.id}
-                      className={isMobileList ? 'transaction-row-clickable' : undefined}
-                      onClick={isMobileList ? () => openDetail(t) : undefined}
+                      className="transaction-row-clickable"
+                      onClick={() => openDetail(t)}
                     >
                       <td className="mono tx-col-date">{formatDate(t.transaction_date)}</td>
                       <td className="tx-col-category">
@@ -452,6 +449,7 @@ export function TransactionsPage() {
         onEdit={setEditing}
         onCorrect={setCorrecting}
         onDelete={setDeleting}
+        onCashbackUpdated={(updated) => setDetailTx(updated)}
       />
 
       <ConfirmDialog
