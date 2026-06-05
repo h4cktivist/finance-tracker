@@ -26,8 +26,7 @@ import { currentMonthStartIso, formatMoney, todayIso } from '@/lib/format'
 import { Heatmap } from '@/components/Heatmap'
 import { IncomeExpenseTrendCharts } from '@/components/IncomeExpenseTrendCharts'
 import { Link } from 'react-router-dom'
-
-const PIE_COLORS = ['#7c5cff', '#38bdf8', '#2dd4bf', '#f5b450', '#ef4761', '#a78bfa', '#34d399']
+import { categoryChartColor } from '@/lib/categoryColor'
 
 const monthFrom = currentMonthStartIso()
 const monthTo = todayIso()
@@ -45,13 +44,15 @@ export function DashboardPage() {
   const h = heatmap.data
   const r = ratios.data
 
-  const expensePie = (s?.top_expense_categories ?? []).map((c) => ({
+  const expensePie = (s?.top_expense_categories ?? []).map((c, i) => ({
     name: c.category_name,
     value: Number(c.total),
+    color: categoryChartColor(c.color, i),
   }))
-  const incomeBars = (s?.top_income_categories ?? []).map((c) => ({
+  const incomeBars = (s?.top_income_categories ?? []).map((c, i) => ({
     name: c.category_name,
     value: Number(c.total),
+    color: categoryChartColor(c.color, i),
   }))
 
   return (
@@ -121,8 +122,8 @@ export function DashboardPage() {
                       outerRadius={100}
                       paddingAngle={2}
                     >
-                      {expensePie.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      {expensePie.map((entry) => (
+                        <Cell key={entry.name} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip
@@ -138,9 +139,9 @@ export function DashboardPage() {
                 </ResponsiveContainer>
               </div>
               <div className="pie-legend">
-                {expensePie.map((entry, i) => (
+                {expensePie.map((entry) => (
                   <span key={entry.name} className="pill">
-                    <span className="color-swatch" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                    <span className="color-swatch" style={{ background: entry.color }} />
                     {entry.name}
                   </span>
                 ))}
@@ -171,7 +172,11 @@ export function DashboardPage() {
                       borderRadius: 10,
                     }}
                   />
-                  <Bar dataKey="value" radius={[8, 8, 0, 0]} fill="#2dd4bf" />
+                  <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                    {incomeBars.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>

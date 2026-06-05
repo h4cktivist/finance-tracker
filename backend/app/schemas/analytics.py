@@ -15,6 +15,7 @@ class DashboardResponse(BaseModel):
 class CategoryStat(BaseModel):
     category_id: str
     category_name: str
+    color: str | None = None
     total: Decimal
 
 

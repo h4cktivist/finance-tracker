@@ -305,15 +305,25 @@ class AnalyticsService:
         if investment_ids and tx_type == TransactionType.EXPENSE:
             category_filters.append(Category.id.notin_(investment_ids))
         result = await self.session.execute(
-            select(Category.id, Category.name, func.coalesce(func.sum(Transaction.amount), 0))
+            select(
+                Category.id,
+                Category.name,
+                Category.color,
+                func.coalesce(func.sum(Transaction.amount), 0),
+            )
             .join(Transaction, Transaction.category_id == Category.id)
             .where(*category_filters)
-            .group_by(Category.id, Category.name)
+            .group_by(Category.id, Category.name, Category.color)
             .order_by(func.sum(Transaction.amount).desc())
             .limit(limit)
         )
         return [
-            CategoryStat(category_id=str(row[0]), category_name=row[1], total=Decimal(str(row[2])))
+            CategoryStat(
+                category_id=str(row[0]),
+                category_name=row[1],
+                color=row[2],
+                total=Decimal(str(row[3])),
+            )
             for row in result.all()
         ]
 

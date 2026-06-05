@@ -391,6 +391,7 @@ export type Dashboard = {
 export type CategoryStat = {
   category_id: string
   category_name: string
+  color: string | null
   total: string
 }
 

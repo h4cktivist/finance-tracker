@@ -18,8 +18,7 @@ import { formatMoney, toIsoDate } from '@/lib/format'
 import type { Forecast } from '@/lib/types'
 import { Heatmap } from '@/components/Heatmap'
 import { IncomeExpenseTrendCharts } from '@/components/IncomeExpenseTrendCharts'
-
-const PIE_COLORS = ['#7c5cff', '#38bdf8', '#2dd4bf', '#f5b450', '#ef4761', '#a78bfa', '#34d399']
+import { categoryChartColor } from '@/lib/categoryColor'
 
 function defaultRange(daysBack: number) {
   const to = new Date()
@@ -37,13 +36,15 @@ export function AnalyticsPage() {
   const ratios = useRatios(excludeInvestments)
   const forecast = useForecast(excludeInvestments)
 
-  const expenses = (stats.data?.top_expense_categories ?? []).map((c) => ({
+  const expenses = (stats.data?.top_expense_categories ?? []).map((c, i) => ({
     name: c.category_name,
     value: Number(c.total),
+    color: categoryChartColor(c.color, i),
   }))
-  const incomes = (stats.data?.top_income_categories ?? []).map((c) => ({
+  const incomes = (stats.data?.top_income_categories ?? []).map((c, i) => ({
     name: c.category_name,
     value: Number(c.total),
+    color: categoryChartColor(c.color, i),
   }))
 
   return (
@@ -110,8 +111,8 @@ export function AnalyticsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={expenses} dataKey="value" innerRadius={70} outerRadius={110} paddingAngle={2}>
-                    {expenses.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    {expenses.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -130,11 +131,11 @@ export function AnalyticsPage() {
             <div style={{ marginTop: 10 }}>
               <table className="table">
                 <tbody>
-                  {expenses.map((e, i) => (
+                  {expenses.map((e) => (
                     <tr key={e.name}>
                       <td>
                         <span className="row" style={{ gap: 8 }}>
-                          <span className="color-swatch" style={{ background: PIE_COLORS[i % PIE_COLORS.length], margin: 0 }} />
+                          <span className="color-swatch" style={{ background: e.color, margin: 0 }} />
                           {e.name}
                         </span>
                       </td>
@@ -168,7 +169,11 @@ export function AnalyticsPage() {
                       borderRadius: 10,
                     }}
                   />
-                  <Bar dataKey="value" radius={[8, 8, 0, 0]} fill="#2dd4bf" />
+                  <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                    {incomes.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
