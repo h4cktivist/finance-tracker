@@ -168,6 +168,8 @@ export function AnalyticsPage() {
                       border: '1px solid rgba(120,134,200,0.28)',
                       borderRadius: 10,
                     }}
+                    labelStyle={{ color: '#e8ecff' }}
+                    itemStyle={{ color: '#e8ecff' }}
                   />
                   <Bar dataKey="value" radius={[8, 8, 0, 0]}>
                     {incomes.map((entry) => (
