@@ -50,24 +50,14 @@ function MerchantCell(props: any) {
   const { x, y, width, height, depth, name, color, size, count, category, share } = props
 
   if (depth === 1) {
-    const showLabel = width > 50 && height > 20
     return (
-      <g>
-        <rect
-          x={x}
-          y={y}
-          width={width}
-          height={height}
-          style={{ fill: 'transparent', stroke: 'rgba(255,255,255,0.16)', strokeWidth: 2 }}
-        />
-        {showLabel && (
-          <foreignObject x={x + 6} y={y + 4} width={Math.max(width - 12, 0)} height={20}>
-            <span className="merchant-treemap-category-tag" style={{ background: color }}>
-              {truncate(name, 22)}
-            </span>
-          </foreignObject>
-        )}
-      </g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        style={{ fill: 'transparent', stroke: 'rgba(255,255,255,0.16)', strokeWidth: 2 }}
+      />
     )
   }
 

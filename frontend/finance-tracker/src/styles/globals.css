@@ -720,18 +720,6 @@ p { margin: 0; }
 .merchant-treemap-area {
   height: 340px;
 }
-.merchant-treemap-category-tag {
-  display: inline-block;
-  max-width: 100%;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #0b1020;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .tx-category-icon {
   display: none;
@@ -1215,6 +1203,14 @@ p { margin: 0; }
   }
   .grid-3 {
     grid-template-columns: 1fr;
+  }
+
+  .merchant-treemap-area {
+    height: 220px !important;
+  }
+  .merchant-treemap-block .pill {
+    font-size: 11px;
+    padding: 3px 8px;
   }
 
   .table th, .table td {
