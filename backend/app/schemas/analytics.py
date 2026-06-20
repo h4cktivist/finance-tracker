@@ -27,6 +27,24 @@ class StatisticsResponse(BaseModel):
     average_monthly_income: Decimal
 
 
+class MerchantStat(BaseModel):
+    merchant_name: str
+    total: Decimal
+    count: int
+
+
+class CategoryMerchants(BaseModel):
+    category_id: str
+    category_name: str
+    color: str | None = None
+    total: Decimal
+    merchants: list[MerchantStat]
+
+
+class MerchantsResponse(BaseModel):
+    categories: list[CategoryMerchants]
+
+
 class HeatmapDay(BaseModel):
     date: str
     count: int

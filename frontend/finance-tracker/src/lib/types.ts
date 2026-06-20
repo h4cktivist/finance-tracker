@@ -403,6 +403,24 @@ export type Statistics = {
   average_monthly_income: string
 }
 
+export type MerchantStat = {
+  merchant_name: string
+  total: string
+  count: number
+}
+
+export type CategoryMerchants = {
+  category_id: string
+  category_name: string
+  color: string | null
+  total: string
+  merchants: MerchantStat[]
+}
+
+export type Merchants = {
+  categories: CategoryMerchants[]
+}
+
 export type HeatmapDay = {
   date: string
   count: number

@@ -33,6 +33,7 @@ import type {
   Heatmap,
   AIRecommendations,
   AppNotification,
+  Merchants,
   Paginated,
   Ratios,
   Recurring,
@@ -200,6 +201,7 @@ export function useCreateTransaction() {
       qc.invalidateQueries({ queryKey: ['dashboard'] })
       qc.invalidateQueries({ queryKey: ['goals'] })
       qc.invalidateQueries({ queryKey: ['statistics'] })
+      qc.invalidateQueries({ queryKey: ['merchants'] })
       qc.invalidateQueries({ queryKey: ['heatmap'] })
       qc.invalidateQueries({ queryKey: ['ratios'] })
       qc.invalidateQueries({ queryKey: ['budgets'] })
@@ -500,6 +502,18 @@ export function useStatistics(
         '/analytics/statistics',
         analyticsParams(excludeInvestments, params),
       )
+    },
+  })
+}
+
+export function useMerchants(dateFrom?: string, dateTo?: string, excludeInvestments = false) {
+  return useQuery({
+    queryKey: ['merchants', dateFrom, dateTo, excludeInvestments],
+    queryFn: () => {
+      const params: Record<string, unknown> = {}
+      if (dateFrom) params.date_from = dateFrom
+      if (dateTo) params.date_to = dateTo
+      return api.get<Merchants>('/analytics/merchants', analyticsParams(excludeInvestments, params))
     },
   })
 }

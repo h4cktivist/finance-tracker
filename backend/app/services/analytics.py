@@ -14,10 +14,13 @@ from app.repositories.category import CategoryRepository
 from app.repositories.goal import GoalRepository
 from app.repositories.ledger import LedgerRepository
 from app.schemas.analytics import (
+    CategoryMerchants,
     CategoryStat,
     DashboardResponse,
     HeatmapDay,
     HeatmapResponse,
+    MerchantStat,
+    MerchantsResponse,
     RatiosResponse,
     StatisticsResponse,
     TrendPoint,
@@ -134,6 +137,71 @@ class AnalyticsService:
             average_daily_spending=expenses / days if days else Decimal("0"),
             average_monthly_income=income / Decimal(str(months)),
         )
+
+    async def merchants(
+        self,
+        user_id: UUID,
+        date_from: date | None = None,
+        date_to: date | None = None,
+        *,
+        exclude_investments: bool = False,
+        limit_categories: int = 6,
+        limit_merchants: int = 6,
+    ) -> MerchantsResponse:
+        date_to = date_to or date.today()
+        date_from = date_from or date_to - timedelta(days=30)
+        investment_ids = (
+            await self._investment_expense_category_ids(user_id) if exclude_investments else []
+        )
+        merchant_filters = [
+            Transaction.user_id == user_id,
+            Transaction.type == TransactionType.EXPENSE,
+            Transaction.deleted_at.is_(None),
+            Transaction.merchant_name.is_not(None),
+            Transaction.transaction_date >= date_from,
+            Transaction.transaction_date <= date_to,
+            Category.deleted_at.is_(None),
+        ]
+        if investment_ids:
+            merchant_filters.append(Category.id.notin_(investment_ids))
+        result = await self.session.execute(
+            select(
+                Category.id,
+                Category.name,
+                Category.color,
+                Transaction.merchant_name,
+                func.sum(Transaction.amount),
+                func.count(Transaction.id),
+            )
+            .join(Transaction, Transaction.category_id == Category.id)
+            .where(*merchant_filters)
+            .group_by(Category.id, Category.name, Category.color, Transaction.merchant_name)
+        )
+        by_category: dict[UUID, dict] = {}
+        for cat_id, cat_name, color, merchant_name, total, count in result.all():
+            bucket = by_category.setdefault(
+                cat_id,
+                {"category_name": cat_name, "color": color, "total": Decimal("0"), "merchants": []},
+            )
+            amount = Decimal(str(total))
+            bucket["total"] += amount
+            bucket["merchants"].append(
+                MerchantStat(merchant_name=merchant_name, total=amount, count=count)
+            )
+        categories = [
+            CategoryMerchants(
+                category_id=str(cat_id),
+                category_name=data["category_name"],
+                color=data["color"],
+                total=data["total"],
+                merchants=sorted(data["merchants"], key=lambda m: m.total, reverse=True)[
+                    :limit_merchants
+                ],
+            )
+            for cat_id, data in by_category.items()
+        ]
+        categories.sort(key=lambda c: c.total, reverse=True)
+        return MerchantsResponse(categories=categories[:limit_categories])
 
     async def heatmap(
         self,

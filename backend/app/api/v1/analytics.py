@@ -8,6 +8,7 @@ from app.schemas.analytics import (
     DashboardResponse,
     ForecastResponse,
     HeatmapResponse,
+    MerchantsResponse,
     RatiosResponse,
     StatisticsResponse,
     TrendsResponse,
@@ -39,6 +40,21 @@ async def statistics(
 ) -> APIResponse[StatisticsResponse]:
     service = AnalyticsService(db)
     data = await service.statistics(
+        user.id, date_from, date_to, exclude_investments=exclude_investments
+    )
+    return APIResponse(data=data)
+
+
+@router.get("/merchants", response_model=APIResponse[MerchantsResponse])
+async def merchants(
+    user: CurrentUser,
+    db: DbSession,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    exclude_investments: bool = Query(False),
+) -> APIResponse[MerchantsResponse]:
+    service = AnalyticsService(db)
+    data = await service.merchants(
         user.id, date_from, date_to, exclude_investments=exclude_investments
     )
     return APIResponse(data=data)

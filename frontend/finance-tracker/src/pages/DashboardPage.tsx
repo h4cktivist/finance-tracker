@@ -21,10 +21,18 @@ import {
 } from 'lucide-react'
 import { ExcludeInvestmentsToggle } from '@/components/ExcludeInvestmentsToggle'
 import { useAnalyticsPreferences } from '@/context/AnalyticsPreferencesContext'
-import { useDashboard, useHeatmap, useRatios, useStatistics, useTrends } from '@/hooks/useQueries'
+import {
+  useDashboard,
+  useHeatmap,
+  useMerchants,
+  useRatios,
+  useStatistics,
+  useTrends,
+} from '@/hooks/useQueries'
 import { currentMonthStartIso, formatMoney, todayIso } from '@/lib/format'
 import { Heatmap } from '@/components/Heatmap'
 import { IncomeExpenseTrendCharts } from '@/components/IncomeExpenseTrendCharts'
+import { MerchantTreemap } from '@/components/MerchantTreemap'
 import { Link } from 'react-router-dom'
 import { categoryChartColor } from '@/lib/categoryColor'
 
@@ -36,12 +44,14 @@ export function DashboardPage() {
   const dashboard = useDashboard(excludeInvestments)
   const stats = useStatistics(undefined, undefined, excludeInvestments)
   const heatmap = useHeatmap(undefined, undefined, excludeInvestments)
+  const merchants = useMerchants(undefined, undefined, excludeInvestments)
   const ratios = useRatios(excludeInvestments)
   const trends = useTrends(monthFrom, monthTo, excludeInvestments)
 
   const d = dashboard.data
   const s = stats.data
   const h = heatmap.data
+  const mch = merchants.data
   const r = ratios.data
 
   const expensePie = (s?.top_expense_categories ?? []).map((c, i) => ({
@@ -184,6 +194,20 @@ export function DashboardPage() {
             </div>
           )}
         </div>
+      </section>
+
+      <section className="card">
+        <div className="card-header">
+          <div>
+            <h2>Карта магазинов</h2>
+            <p className="card-subtitle">Размер блока — сумма трат, цвет — категория</p>
+          </div>
+        </div>
+        {!mch || mch.categories.length === 0 ? (
+          <div className="empty"><p>Нет данных</p></div>
+        ) : (
+          <MerchantTreemap categories={mch.categories} />
+        )}
       </section>
 
       <section className="card">
