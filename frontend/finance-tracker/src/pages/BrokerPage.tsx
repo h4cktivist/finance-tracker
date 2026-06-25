@@ -319,7 +319,7 @@ export function BrokerPage() {
                       <td>{tx.name}</td>
                       <td className="dim">{tx.symbol ?? '—'}</td>
                       <td className={amountClass(tx.kind, amount)}>
-                        {amount >= 0 ? '+' : ''}{formatMoney(amount)} {tx.currency}
+                        {amount >= 0 ? '+' : ''}{formatMoney(amount)}
                       </td>
                     </tr>
                   )
