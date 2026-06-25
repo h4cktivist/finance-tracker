@@ -12,6 +12,7 @@ import {
   Menu,
   Receipt,
   RefreshCw,
+  Settings,
   Tag,
   Sparkles,
   Target,
@@ -71,6 +72,7 @@ const TITLES: Record<string, string> = {
   '/analytics': 'Аналитика',
   '/recommendations': 'ИИ-советы',
   '/notifications': 'Уведомления',
+  '/settings': 'Настройки',
 }
 
 export function AppLayout() {
@@ -123,6 +125,9 @@ export function AppLayout() {
             <div className="email" title={user?.email}>{user?.email}</div>
             <div className="dim">В сети</div>
           </div>
+          <NavLink to="/settings" className="icon-btn" title="Настройки" aria-label="Настройки">
+            <Settings size={16} />
+          </NavLink>
           <button
             type="button"
             className="icon-btn"

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Briefcase,
   ChevronLeft,
@@ -6,11 +7,13 @@ import {
   Coins,
   PieChart,
   RefreshCw,
+  Settings,
   TrendingDown,
   TrendingUp,
   Wallet,
 } from 'lucide-react'
 import { useBrokerPortfolio } from '@/hooks/useQueries'
+import { brokerSettings } from '@/lib/brokerSettings'
 import { EmptyState } from '@/components/EmptyState'
 import { ApiException } from '@/lib/api'
 import { formatDate, formatMoney, formatNumber, formatRelative } from '@/lib/format'
@@ -56,6 +59,23 @@ export function BrokerPage() {
   const portfolio = useBrokerPortfolio()
   const [positionsPage, setPositionsPage] = useState(1)
   const [transactionsPage, setTransactionsPage] = useState(1)
+
+  if (!brokerSettings.get()) {
+    return (
+      <div className="card">
+        <EmptyState
+          title="Брокерский счёт не подключён"
+          description="Укажите токен Finam и номер счёта в настройках, чтобы увидеть портфель"
+          icon={<Briefcase size={36} />}
+          action={
+            <Link to="/settings" className="btn btn-primary">
+              <Settings size={16} /> Перейти в настройки
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
 
   if (portfolio.isLoading) {
     return <div className="card"><div className="muted">Загрузка…</div></div>
@@ -123,7 +143,6 @@ export function BrokerPage() {
         <div className="kpi">
           <span className="label"><Briefcase size={14} /> Общая стоимость</span>
           <span className="value mono">{formatMoney(data.equity)}</span>
-          <span className="hint">эквити счёта</span>
         </div>
         <div className="kpi">
           <span className="label"><Wallet size={14} /> Денежные средства</span>
@@ -137,7 +156,6 @@ export function BrokerPage() {
           <span className={`value mono ${unrealizedPnl >= 0 ? 'value-positive' : 'value-negative'}`}>
             {unrealizedPnl >= 0 ? '+' : ''}{formatMoney(unrealizedPnl)}
           </span>
-          <span className="hint">нереализованный</span>
         </div>
         <div className="kpi">
           <span className="label">
@@ -244,8 +262,18 @@ export function BrokerPage() {
                       </td>
                       <td>{p.asset_class ?? '—'}</td>
                       <td className="mono">{formatNumber(p.quantity)}</td>
-                      <td className="mono">{formatMoney(p.average_price)}</td>
-                      <td className="mono">{formatMoney(p.current_price)}</td>
+                      <td className="mono">
+                        {formatMoney(p.average_price)}
+                        {p.average_price_percent !== null && (
+                          <div className="dim">{Number(p.average_price_percent).toFixed(2)}%</div>
+                        )}
+                      </td>
+                      <td className="mono">
+                        {formatMoney(p.current_price)}
+                        {p.current_price_percent !== null && (
+                          <div className="dim">{Number(p.current_price_percent).toFixed(2)}%</div>
+                        )}
+                      </td>
                       <td className="mono">{formatMoney(p.market_value)}</td>
                       <td className={`mono ${daily >= 0 ? 'value-positive' : 'value-negative'}`}>
                         {daily >= 0 ? '+' : ''}{formatMoney(daily)}

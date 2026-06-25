@@ -117,8 +117,8 @@ async function unwrap<T>(promise: Promise<{ data: ApiResponse<T> }>): Promise<T>
 }
 
 export const api = {
-  get<T>(url: string, params?: Record<string, unknown>) {
-    return unwrap<T>(client.get(url, { params }))
+  get<T>(url: string, params?: Record<string, unknown>, headers?: Record<string, string>) {
+    return unwrap<T>(client.get(url, { params, headers }))
   },
   post<T>(url: string, body?: unknown) {
     return unwrap<T>(client.post(url, body))

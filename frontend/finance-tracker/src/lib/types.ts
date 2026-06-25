@@ -499,7 +499,9 @@ export type BrokerPosition = {
   asset_class: string | null
   quantity: string
   average_price: string
+  average_price_percent: string | null
   current_price: string
+  current_price_percent: string | null
   market_value: string
   unrealized_pnl: string
   unrealized_pnl_percent: number

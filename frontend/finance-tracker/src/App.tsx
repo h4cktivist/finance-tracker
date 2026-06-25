@@ -19,6 +19,7 @@ import { GoalsPage } from './pages/GoalsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { RecommendationsPage } from './pages/RecommendationsPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 function Protected({ children }: { children: JSX.Element }) {
   const { isAuthenticated, isInitializing } = useAuth()
@@ -71,6 +72,7 @@ export default function App() {
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/recommendations" element={<RecommendationsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

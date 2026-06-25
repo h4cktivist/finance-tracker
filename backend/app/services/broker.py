@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
-from app.core.config import get_settings
 from app.core.exceptions import AppException
 from app.schemas.broker import (
     BrokerAllocationItem,
@@ -14,8 +13,6 @@ from app.schemas.broker import (
     BrokerTransaction,
 )
 from app.services.finam_trade_api import FinamTradeApiClient
-
-settings = get_settings()
 
 ASSET_TYPE_LABELS = {
     "EQUITIES": "Акции",
@@ -31,10 +28,10 @@ TRANSACTIONS_LIMIT = 1000
 RECENT_TRANSACTIONS_LIMIT = 30
 
 
-class BrokerNotConfiguredError(AppException):
+class BrokerCredentialsMissingError(AppException):
 
-    def __init__(self, message: str = "Broker account is not configured") -> None:
-        super().__init__(message=message, code="BROKER_NOT_CONFIGURED", status_code=503)
+    def __init__(self, message: str = "Заполните токен Finam и номер счёта в настройках") -> None:
+        super().__init__(message=message, code="BROKER_NOT_CONFIGURED", status_code=400)
 
 
 def _money(value: dict[str, Any] | None) -> Decimal:
@@ -76,12 +73,16 @@ def _classify_transaction(category: str, name: str) -> str:
 
 class BrokerService:
 
-    async def get_portfolio(self) -> BrokerPortfolio:
-        if not settings.finam_account_id:
-            raise BrokerNotConfiguredError("FINAM_ACCOUNT_ID is not configured")
-        account_id = settings.finam_account_id
+    def __init__(self, api_token: str, account_id: str) -> None:
+        if not api_token or not account_id:
+            raise BrokerCredentialsMissingError()
+        self._api_token = api_token
+        self._account_id = account_id
 
-        async with FinamTradeApiClient() as client:
+    async def get_portfolio(self) -> BrokerPortfolio:
+        account_id = self._account_id
+
+        async with FinamTradeApiClient(self._api_token) as client:
             account = await client.get(f"/v1/accounts/{account_id}")
             raw_positions: list[dict[str, Any]] = account.get("positions", [])
             symbols = sorted({p["symbol"] for p in raw_positions})
@@ -107,17 +108,33 @@ class BrokerService:
 
         for p in raw_positions:
             quantity = Decimal(str(p["quantity"]["value"]))
-            average_price = _money(p.get("average_price"))
-            current_price = _money(p.get("current_price"))
+            raw_average_price = _money(p.get("average_price"))
+            raw_current_price = _money(p.get("current_price"))
             unrealized_pnl = _money(p.get("unrealized_pnl"))
             daily_pnl = _money(p.get("daily_pnl"))
-            market_value = quantity * current_price
-            cost_basis = quantity * average_price
-            pnl_percent = float(unrealized_pnl / cost_basis * 100) if cost_basis else 0.0
 
             instrument = instruments.get(p["symbol"], {})
             instrument_type = instrument.get("type")
             asset_class = ASSET_TYPE_LABELS.get(instrument_type, instrument_type or "Прочее")
+
+            bond_details = instrument.get("bond_details")
+            if bond_details:
+                face_value = _money(bond_details.get("bond_face_value")) or Decimal("1000")
+                multiplier = face_value / Decimal("100")
+                average_price = raw_average_price * multiplier
+                current_price = raw_current_price * multiplier
+                average_price_percent = raw_average_price
+                current_price_percent = raw_current_price
+            else:
+                average_price = raw_average_price
+                current_price = raw_current_price
+                average_price_percent = None
+                current_price_percent = None
+
+            market_value = quantity * current_price
+            cost_basis = quantity * average_price
+            pnl_percent = float(unrealized_pnl / cost_basis * 100) if cost_basis else 0.0
+
             allocation_values[asset_class] = allocation_values.get(asset_class, Decimal("0")) + market_value
 
             positions.append(
@@ -127,7 +144,9 @@ class BrokerService:
                     asset_class=asset_class,
                     quantity=quantity,
                     average_price=average_price,
+                    average_price_percent=average_price_percent,
                     current_price=current_price,
+                    current_price_percent=current_price_percent,
                     market_value=market_value,
                     unrealized_pnl=unrealized_pnl,
                     unrealized_pnl_percent=pnl_percent,

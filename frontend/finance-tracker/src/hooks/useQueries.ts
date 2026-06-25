@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { brokerSettings } from '@/lib/brokerSettings'
 import type {
   Account,
   AccountCreate,
@@ -600,9 +601,15 @@ export function useMarkAllRead() {
 
 // === Broker ===
 export function useBrokerPortfolio() {
+  const settings = brokerSettings.get()
   return useQuery({
-    queryKey: ['broker', 'portfolio'],
-    queryFn: () => api.get<BrokerPortfolio>('/broker/portfolio'),
+    queryKey: ['broker', 'portfolio', settings?.token, settings?.accountId],
+    queryFn: () =>
+      api.get<BrokerPortfolio>('/broker/portfolio', undefined, {
+        'X-Finam-Token': settings!.token,
+        'X-Finam-Account-Id': settings!.accountId,
+      }),
+    enabled: !!settings,
     retry: 1,
   })
 }

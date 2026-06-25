@@ -15,7 +15,9 @@ class BrokerPosition(BaseModel):
     asset_class: str | None
     quantity: Decimal
     average_price: Decimal
+    average_price_percent: Decimal | None
     current_price: Decimal
+    current_price_percent: Decimal | None
     market_value: Decimal
     unrealized_pnl: Decimal
     unrealized_pnl_percent: float

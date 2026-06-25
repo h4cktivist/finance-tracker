@@ -62,9 +62,6 @@ class Settings(BaseSettings):
         validation_alias="OPENROUTER_MODEL",
     )
 
-    finam_api_token: str | None = Field(default=None, validation_alias="FINAM_API_TOKEN")
-    finam_account_id: str | None = Field(default=None, validation_alias="FINAM_ACCOUNT_ID")
-
     @model_validator(mode="after")
     def _resolve_database_urls(self):
         if self.database_url:
