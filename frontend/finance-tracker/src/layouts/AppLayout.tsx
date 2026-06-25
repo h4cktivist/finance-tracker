@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   BarChart3,
   Bell,
+  Briefcase,
   CreditCard,
   Folder,
   Goal as GoalIcon,
@@ -32,6 +33,7 @@ const SECTIONS: Array<{
     items: [
       { to: '/transactions', label: 'Транзакции', icon: Receipt },
       { to: '/accounts', label: 'Счета', icon: Wallet2 },
+      { to: '/broker', label: 'Брокерский счёт', icon: Briefcase },
       { to: '/budgets', label: 'Бюджеты', icon: Target },
       { to: '/recurring', label: 'Подписки', icon: RefreshCw },
     ],
@@ -59,6 +61,7 @@ const TITLES: Record<string, string> = {
   '/': 'Дашборд',
   '/transactions': 'Транзакции',
   '/accounts': 'Счета',
+  '/broker': 'Брокерский счёт',
   '/budgets': 'Бюджеты',
   '/recurring': 'Повторяющиеся операции',
   '/categories': 'Категории',

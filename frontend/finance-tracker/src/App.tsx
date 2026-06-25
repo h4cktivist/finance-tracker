@@ -8,6 +8,7 @@ import { RegisterPage } from './pages/auth/RegisterPage'
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { AccountsPage } from './pages/AccountsPage'
+import { BrokerPage } from './pages/BrokerPage'
 import { CategoriesPage } from './pages/CategoriesPage'
 import { TagsPage } from './pages/TagsPage'
 import { TransactionsPage } from './pages/TransactionsPage'
@@ -59,6 +60,7 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="/accounts" element={<AccountsPage />} />
+        <Route path="/broker" element={<BrokerPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/tags" element={<TagsPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />

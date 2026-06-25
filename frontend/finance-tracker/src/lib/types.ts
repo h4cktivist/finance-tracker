@@ -487,3 +487,74 @@ export type AIRecommendations = {
   month: string
   content: string
 }
+
+export type BrokerCashBalance = {
+  currency: string
+  amount: string
+}
+
+export type BrokerPosition = {
+  symbol: string
+  name: string | null
+  asset_class: string | null
+  quantity: string
+  average_price: string
+  current_price: string
+  market_value: string
+  unrealized_pnl: string
+  unrealized_pnl_percent: number
+  daily_pnl: string
+  weight_percent: number
+}
+
+export type BrokerAllocationItem = {
+  asset_class: string
+  market_value: string
+  weight_percent: number
+}
+
+export type BrokerTransactionKind =
+  | 'deposit'
+  | 'withdrawal'
+  | 'commission'
+  | 'coupon'
+  | 'dividend'
+  | 'redemption'
+  | 'lending'
+  | 'income_other'
+  | 'other'
+
+export type BrokerIncomeBreakdown = {
+  coupon: string
+  dividend: string
+  redemption: string
+  lending: string
+  other: string
+  commission: string
+  total_return: string
+  period_from: string
+}
+
+export type BrokerTransaction = {
+  id: string
+  timestamp: string
+  kind: BrokerTransactionKind
+  name: string
+  symbol: string | null
+  amount: string
+  currency: string
+}
+
+export type BrokerPortfolio = {
+  account_id: string
+  status: string
+  equity: string
+  unrealized_pnl: string
+  daily_pnl: string
+  cash: BrokerCashBalance[]
+  positions: BrokerPosition[]
+  allocation: BrokerAllocationItem[]
+  income: BrokerIncomeBreakdown
+  transactions: BrokerTransaction[]
+  updated_at: string
+}

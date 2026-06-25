@@ -4,6 +4,7 @@ import type {
   Account,
   AccountCreate,
   AccountUpdate,
+  BrokerPortfolio,
   Budget,
   BudgetCreate,
   BudgetRecommendations,
@@ -594,5 +595,14 @@ export function useMarkAllRead() {
   return useMutation({
     mutationFn: () => api.post<{ marked_read: number }>('/notifications/read-all', {}),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+  })
+}
+
+// === Broker ===
+export function useBrokerPortfolio() {
+  return useQuery({
+    queryKey: ['broker', 'portfolio'],
+    queryFn: () => api.get<BrokerPortfolio>('/broker/portfolio'),
+    retry: 1,
   })
 }
