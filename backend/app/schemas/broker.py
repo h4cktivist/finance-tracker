@@ -64,3 +64,8 @@ class BrokerPortfolio(BaseModel):
     income: BrokerIncomeBreakdown
     transactions: list[BrokerTransaction]
     updated_at: datetime
+
+
+class BrokerRecommendationsResponse(BaseModel):
+    account_id: str
+    content: str

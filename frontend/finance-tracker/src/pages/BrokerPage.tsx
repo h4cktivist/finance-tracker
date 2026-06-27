@@ -5,17 +5,22 @@ import {
   ChevronLeft,
   ChevronRight,
   Coins,
+  Loader2,
   PieChart,
   RefreshCw,
   Settings,
+  Sparkles,
   TrendingDown,
   TrendingUp,
   Wallet,
 } from 'lucide-react'
-import { useBrokerPortfolio } from '@/hooks/useQueries'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { useBrokerPortfolio, useBrokerRecommendations } from '@/hooks/useQueries'
 import { brokerSettings } from '@/lib/brokerSettings'
 import { EmptyState } from '@/components/EmptyState'
 import { ApiException } from '@/lib/api'
+import { handleApiError } from '@/lib/errors'
 import { formatDate, formatMoney, formatNumber, formatRelative } from '@/lib/format'
 import type { BrokerTransactionKind } from '@/lib/types'
 
@@ -57,8 +62,21 @@ function Pager({
 
 export function BrokerPage() {
   const portfolio = useBrokerPortfolio()
+  const recommend = useBrokerRecommendations()
   const [positionsPage, setPositionsPage] = useState(1)
   const [transactionsPage, setTransactionsPage] = useState(1)
+  const [aiContent, setAiContent] = useState<string | null>(null)
+  const [aiGeneratedAt, setAiGeneratedAt] = useState<Date | null>(null)
+
+  const handleGenerateRecommendations = async () => {
+    try {
+      const result = await recommend.mutateAsync()
+      setAiContent(result.content)
+      setAiGeneratedAt(new Date())
+    } catch (err) {
+      handleApiError(err, 'Не удалось получить рекомендации по портфелю')
+    }
+  }
 
   if (!brokerSettings.get()) {
     return (
@@ -174,6 +192,55 @@ export function BrokerPage() {
           <span className="hint">с {formatDate(data.income.period_from)}</span>
         </div>
       </section>
+
+      <section className="card ai-toolbar">
+        <p className="ai-toolbar-desc">
+          ИИ анализирует состав вашего портфеля и предлагает обзор, оценку рисков и рекомендации
+          по активам.
+        </p>
+        <div className="ai-month-controls">
+          <button
+            type="button"
+            className="btn btn-primary ai-generate-btn"
+            onClick={() => void handleGenerateRecommendations()}
+            disabled={recommend.isPending}
+          >
+            {recommend.isPending ? (
+              <>
+                <Loader2 size={16} className="spin" /> Анализ…
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} /> Получить рекомендации по портфелю
+              </>
+            )}
+          </button>
+        </div>
+      </section>
+
+      {recommend.isPending && !aiContent && (
+        <section className="card ai-loading">
+          <Loader2 size={28} className="spin" />
+          <p>ИИ изучает ваш портфель…</p>
+          <p className="hint dim">Это может занять до минуты</p>
+        </section>
+      )}
+
+      {aiContent !== null && (
+        <section className="card ai-recommendations">
+          <div className="card-header">
+            <h2>Обзор и рекомендации по портфелю</h2>
+            {aiGeneratedAt && (
+              <span className="hint dim">
+                Обновлено {formatDate(aiGeneratedAt.toISOString(), true)}
+              </span>
+            )}
+          </div>
+          <article className="ai-markdown">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiContent}</ReactMarkdown>
+          </article>
+        </section>
+      )}
 
       {data.allocation.length > 0 && (
         <section className="card">

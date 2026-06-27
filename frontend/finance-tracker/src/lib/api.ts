@@ -120,8 +120,8 @@ export const api = {
   get<T>(url: string, params?: Record<string, unknown>, headers?: Record<string, string>) {
     return unwrap<T>(client.get(url, { params, headers }))
   },
-  post<T>(url: string, body?: unknown) {
-    return unwrap<T>(client.post(url, body))
+  post<T>(url: string, body?: unknown, headers?: Record<string, string>) {
+    return unwrap<T>(client.post(url, body, { headers }))
   },
   patch<T>(url: string, body?: unknown) {
     return unwrap<T>(client.patch(url, body))

@@ -6,6 +6,7 @@ import type {
   AccountCreate,
   AccountUpdate,
   BrokerPortfolio,
+  BrokerRecommendations,
   Budget,
   BudgetCreate,
   BudgetRecommendations,
@@ -611,5 +612,18 @@ export function useBrokerPortfolio() {
       }),
     enabled: !!settings,
     retry: 1,
+  })
+}
+
+export function useBrokerRecommendations() {
+  return useMutation({
+    mutationFn: () => {
+      const settings = brokerSettings.get()
+      if (!settings) throw new Error('Брокерский счёт не подключён')
+      return api.post<BrokerRecommendations>('/broker/recommendations', undefined, {
+        'X-Finam-Token': settings.token,
+        'X-Finam-Account-Id': settings.accountId,
+      })
+    },
   })
 }

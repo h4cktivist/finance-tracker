@@ -560,3 +560,8 @@ export type BrokerPortfolio = {
   transactions: BrokerTransaction[]
   updated_at: string
 }
+
+export type BrokerRecommendations = {
+  account_id: string
+  content: string
+}
