@@ -19,8 +19,14 @@ import {
 import type { CashbackRule } from '@/lib/types'
 import { Modal } from '@/components/Modal'
 import { EmptyState } from '@/components/EmptyState'
-import { currentMonthEndIso, currentMonthStartIso, formatDate, formatMoney } from '@/lib/format'
+import { currentMonthEndIso, currentMonthStartIso, formatDate, formatMoney, todayIso } from '@/lib/format'
 import { handleApiError } from '@/lib/errors'
+
+function isRuleActive(rule: CashbackRule, today: string): boolean {
+  if (rule.start_date > today) return false
+  if (rule.end_date && rule.end_date < today) return false
+  return true
+}
 
 export function CashbackPage() {
   const [createCardOpen, setCreateCardOpen] = useState(false)
@@ -28,6 +34,7 @@ export function CashbackPage() {
   const [ruleModalOpen, setRuleModalOpen] = useState(false)
   const [editingRule, setEditingRule] = useState<CashbackRule | null>(null)
   const [recCategory, setRecCategory] = useState<string>('')
+  const [showExpiredRules, setShowExpiredRules] = useState(false)
 
   const cards = useCards()
   const accounts = useAccounts()
@@ -36,6 +43,12 @@ export function CashbackPage() {
   const missed = useMissedCashback()
   const recs = useCashbackRecommendations(recCategory || undefined)
   const rules = useCardRules(selectedCardId ?? undefined)
+
+  const today = todayIso()
+  const visibleRules = useMemo(
+    () => (showExpiredRules ? rules.data : rules.data?.filter((r) => isRuleActive(r, today))),
+    [rules.data, showExpiredRules, today],
+  )
 
   const expenseCategories = useMemo(
     () => (categories.data ?? []).filter((c) => c.type === 'expense'),
@@ -118,13 +131,27 @@ export function CashbackPage() {
         <section className="card">
           <div className="card-header">
             <h2>Правила кэшбэка</h2>
-            <button className="btn btn-primary btn-sm" onClick={() => setRuleModalOpen(true)}>
-              <Plus size={14} /> Добавить правило
-            </button>
+            <div className="row" style={{ gap: 16 }}>
+              <label className="row" style={{ gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                <input
+                  type="checkbox"
+                  checked={showExpiredRules}
+                  onChange={(e) => setShowExpiredRules(e.target.checked)}
+                />
+                <span>Показать все (включая неактуальные)</span>
+              </label>
+              <button className="btn btn-primary btn-sm" onClick={() => setRuleModalOpen(true)}>
+                <Plus size={14} /> Добавить правило
+              </button>
+            </div>
           </div>
-          {!rules.data || rules.data.length === 0 ? (
+          {!visibleRules || visibleRules.length === 0 ? (
             <div className="empty">
-              <p>Правил пока нет — добавьте первое</p>
+              <p>
+                {!rules.data || rules.data.length === 0
+                  ? 'Правил пока нет — добавьте первое'
+                  : 'Нет актуальных правил на сегодня'}
+              </p>
             </div>
           ) : (
             <div className="table-wrap">
@@ -140,7 +167,7 @@ export function CashbackPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rules.data.map((r) => (
+                  {visibleRules.map((r) => (
                     <tr key={r.id}>
                       <td>{categoryMap[r.category_id]?.name ?? '—'}</td>
                       <td className="mono">{Number(r.cashback_percent).toFixed(2)}%</td>
