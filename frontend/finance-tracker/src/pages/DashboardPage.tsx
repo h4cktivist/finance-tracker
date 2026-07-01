@@ -42,9 +42,9 @@ const monthTo = todayIso()
 export function DashboardPage() {
   const { excludeInvestments } = useAnalyticsPreferences()
   const dashboard = useDashboard(excludeInvestments)
-  const stats = useStatistics(undefined, undefined, excludeInvestments)
-  const heatmap = useHeatmap(undefined, undefined, excludeInvestments)
-  const merchants = useMerchants(undefined, undefined, excludeInvestments)
+  const stats = useStatistics(monthFrom, monthTo, excludeInvestments)
+  const heatmap = useHeatmap(monthFrom, monthTo, excludeInvestments)
+  const merchants = useMerchants(monthFrom, monthTo, excludeInvestments)
   const ratios = useRatios(excludeInvestments)
   const trends = useTrends(monthFrom, monthTo, excludeInvestments)
 
@@ -78,12 +78,12 @@ export function DashboardPage() {
         <div className="kpi">
           <span className="label"><ArrowUpRight size={14} /> Доходы</span>
           <span className="value mono value-positive">{formatMoney(d?.total_income ?? 0)}</span>
-          <span className="hint">за весь период</span>
+          <span className="hint">за текущий месяц</span>
         </div>
         <div className="kpi">
           <span className="label"><ArrowDownRight size={14} /> Расходы</span>
           <span className="value mono value-negative">{formatMoney(d?.total_expenses ?? 0)}</span>
-          <span className="hint">за весь период</span>
+          <span className="hint">за текущий месяц</span>
         </div>
         <div className="kpi">
           <span className="label"><PiggyBank size={14} /> Норма сбережений</span>
