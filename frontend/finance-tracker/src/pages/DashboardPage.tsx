@@ -220,7 +220,7 @@ export function DashboardPage() {
         {!h || h.days.length === 0 ? (
           <div className="empty"><p>Нет данных</p></div>
         ) : (
-          <Heatmap days={h.days} />
+          <Heatmap days={h.days} dateFrom={monthFrom} dateTo={monthTo} />
         )}
       </section>
 

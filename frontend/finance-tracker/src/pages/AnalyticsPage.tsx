@@ -191,9 +191,11 @@ export function AnalyticsPage() {
         {!heat.data || heat.data.days.length === 0 ? (
           <div className="empty"><p>Нет данных</p></div>
         ) : (
-          <Heatmap days={heat.data.days} />
+          <Heatmap days={heat.data.days} dateFrom={range.from} dateTo={range.to} />
         )}
       </div>
+
+      <MonthlyBarChart excludeInvestments={excludeInvestments} />
 
       <div className="card">
         <div className="card-header">
@@ -224,8 +226,6 @@ export function AnalyticsPage() {
       </div>
 
       <ForecastCard data={forecast.data} isLoading={forecast.isLoading} error={forecast.error} />
-
-      <MonthlyBarChart excludeInvestments={excludeInvestments} />
     </>
   )
 }
