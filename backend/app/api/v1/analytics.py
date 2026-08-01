@@ -80,9 +80,16 @@ async def ratios(
     user: CurrentUser,
     db: DbSession,
     exclude_investments: bool = Query(False),
+    date_from: date | None = None,
+    date_to: date | None = None,
 ) -> APIResponse[RatiosResponse]:
     service = AnalyticsService(db)
-    data = await service.ratios(user.id, exclude_investments=exclude_investments)
+    data = await service.ratios(
+        user.id,
+        date_from=date_from,
+        date_to=date_to,
+        exclude_investments=exclude_investments,
+    )
     return APIResponse(data=data)
 
 

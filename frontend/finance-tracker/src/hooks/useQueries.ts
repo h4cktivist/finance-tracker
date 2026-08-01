@@ -545,10 +545,15 @@ export function useTrends(dateFrom?: string, dateTo?: string, excludeInvestments
   })
 }
 
-export function useRatios(excludeInvestments = false) {
+export function useRatios(dateFrom?: string, dateTo?: string, excludeInvestments = false) {
   return useQuery({
-    queryKey: ['ratios', excludeInvestments],
-    queryFn: () => api.get<Ratios>('/analytics/ratios', analyticsParams(excludeInvestments)),
+    queryKey: ['ratios', dateFrom, dateTo, excludeInvestments],
+    queryFn: () => {
+      const params: Record<string, unknown> = {}
+      if (dateFrom) params.date_from = dateFrom
+      if (dateTo) params.date_to = dateTo
+      return api.get<Ratios>('/analytics/ratios', analyticsParams(excludeInvestments, params))
+    },
   })
 }
 

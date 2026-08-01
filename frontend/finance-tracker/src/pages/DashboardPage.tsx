@@ -45,7 +45,7 @@ export function DashboardPage() {
   const stats = useStatistics(monthFrom, monthTo, excludeInvestments)
   const heatmap = useHeatmap(monthFrom, monthTo, excludeInvestments)
   const merchants = useMerchants(monthFrom, monthTo, excludeInvestments)
-  const ratios = useRatios(excludeInvestments)
+  const ratios = useRatios(undefined, undefined, excludeInvestments)
   const trends = useTrends(monthFrom, monthTo, excludeInvestments)
 
   const d = dashboard.data

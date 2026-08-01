@@ -301,23 +301,31 @@ class AnalyticsService:
             current += timedelta(days=1)
         return TrendsResponse(points=points)
 
-    async def ratios(self, user_id: UUID, *, exclude_investments: bool = False) -> RatiosResponse:
+    async def ratios(
+        self,
+        user_id: UUID,
+        date_from: date | None = None,
+        date_to: date | None = None,
+        *,
+        exclude_investments: bool = False,
+    ) -> RatiosResponse:
         today = date.today()
-        month_start = today.replace(day=1)
+        date_to = date_to or today
+        date_from = date_from or today.replace(day=1)
         investment_ids = (
             await self._investment_expense_category_ids(user_id) if exclude_investments else []
         )
         income, expenses = await self._sum_income_expenses(
-            user_id, month_start, today, investment_ids
+            user_id, date_from, date_to, investment_ids
         )
         savings_rate = float((income - expenses) / income) if income > 0 else 0.0
         expense_ratio = float(expenses / income) if income > 0 else 0.0
         discretionary = await self._discretionary_expenses(
-            user_id, month_start, today, investment_ids
+            user_id, date_from, date_to, investment_ids
         )
         discretionary_ratio = float(discretionary / income) if income > 0 else 0.0
         small_transactions_ratio = await self._small_transactions_ratio(
-            user_id, month_start, today, investment_ids
+            user_id, date_from, date_to, investment_ids
         )
         return RatiosResponse(
             savings_rate=savings_rate,

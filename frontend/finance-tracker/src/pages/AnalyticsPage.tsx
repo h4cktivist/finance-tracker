@@ -34,7 +34,7 @@ export function AnalyticsPage() {
   const stats = useStatistics(range.from, range.to, excludeInvestments)
   const heat = useHeatmap(range.from, range.to, excludeInvestments)
   const trends = useTrends(range.from, range.to, excludeInvestments)
-  const ratios = useRatios(excludeInvestments)
+  const ratios = useRatios(range.from, range.to, excludeInvestments)
   const forecast = useForecast(excludeInvestments)
 
   const expenses = (stats.data?.top_expense_categories ?? []).map((c, i) => ({
