@@ -111,6 +111,24 @@ class CashbackService:
         )
         return rule, recalculated
 
+    async def delete_rule(
+        self,
+        user_id: UUID,
+        card_id: UUID,
+        rule_id: UUID,
+        ip: str | None = None,
+    ) -> None:
+        card = await self.card_repo.get_by_id_for_user(card_id, user_id)
+        if card is None:
+            raise NotFoundError("Card not found")
+        rule = await self.rule_repo.get_by_id_for_card(rule_id, card_id)
+        if rule is None:
+            raise NotFoundError("Cashback rule not found")
+        await self.rule_repo.delete(rule)
+        await self.audit.log(
+            "delete", "cashback_rule", user_id=user_id, entity_id=rule_id, ip_address=ip
+        )
+
     async def _recalculate_for_rule(self, user_id: UUID, rule: CashbackRule) -> int:
         transactions = await self.tx_repo.list_expenses_for_cashback_recalc(
             user_id,

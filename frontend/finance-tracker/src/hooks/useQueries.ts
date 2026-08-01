@@ -417,6 +417,19 @@ export function useUpdateCashbackRule(cardId: string) {
   })
 }
 
+export function useDeleteCashbackRule(cardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (ruleId: string) =>
+      api.delete<null>(`/cashback/cards/${cardId}/rules/${ruleId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cashback', 'rules', cardId] })
+      qc.invalidateQueries({ queryKey: ['cashback', 'summary'] })
+      qc.invalidateQueries({ queryKey: ['cashback', 'missed'] })
+    },
+  })
+}
+
 export function useCashbackSummary(periodMonth?: string) {
   return useQuery({
     queryKey: ['cashback', 'summary', periodMonth],

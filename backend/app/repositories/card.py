@@ -46,6 +46,10 @@ class CashbackRuleRepository(BaseRepository[CashbackRule]):
         )
         return result.scalar_one_or_none()
 
+    async def delete(self, rule: CashbackRule) -> None:
+        await self.session.delete(rule)
+        await self.session.flush()
+
     async def find_active_for_category(
         self, user_id: UUID, category_id: UUID, on_date: date
     ) -> list[tuple[CashbackRule, Card]]:

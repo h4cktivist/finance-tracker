@@ -113,6 +113,19 @@ async def update_rule(
     )
 
 
+@router.delete("/cards/{card_id}/rules/{rule_id}", response_model=APIResponse[None])
+async def delete_rule(
+    card_id: UUID,
+    rule_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+    ip: Annotated[str | None, Depends(get_client_ip)] = None,
+) -> APIResponse[None]:
+    service = CashbackService(db)
+    await service.delete_rule(user.id, card_id, rule_id, ip=ip)
+    return APIResponse(data=None)
+
+
 @router.get("/cards/{card_id}/rules", response_model=APIResponse[list[CashbackRuleResponse]])
 async def list_rules(card_id: UUID, user: CurrentUser, db: DbSession) -> APIResponse:
     card_repo = CardRepository(db)

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CreditCard, Pencil, Plus, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
+import { CreditCard, Pencil, Plus, Sparkles, Trash2, TrendingDown, TrendingUp } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -13,11 +13,12 @@ import {
   useCategories,
   useCreateCard,
   useCreateCashbackRule,
+  useDeleteCashbackRule,
   useMissedCashback,
   useUpdateCashbackRule,
 } from '@/hooks/useQueries'
 import type { CashbackRule } from '@/lib/types'
-import { Modal } from '@/components/Modal'
+import { ConfirmDialog, Modal } from '@/components/Modal'
 import { EmptyState } from '@/components/EmptyState'
 import { currentMonthEndIso, currentMonthStartIso, formatDate, formatMoney, todayIso } from '@/lib/format'
 import { handleApiError } from '@/lib/errors'
@@ -35,6 +36,7 @@ export function CashbackPage() {
   const [editingRule, setEditingRule] = useState<CashbackRule | null>(null)
   const [recCategory, setRecCategory] = useState<string>('')
   const [showExpiredRules, setShowExpiredRules] = useState(false)
+  const [deletingRule, setDeletingRule] = useState<CashbackRule | null>(null)
 
   const cards = useCards()
   const accounts = useAccounts()
@@ -60,6 +62,7 @@ export function CashbackPage() {
   const createCard = useCreateCard()
   const createRule = useCreateCashbackRule(selectedCardId ?? '')
   const updateRule = useUpdateCashbackRule(selectedCardId ?? '')
+  const deleteRule = useDeleteCashbackRule(selectedCardId ?? '')
 
   return (
     <>
@@ -180,14 +183,24 @@ export function CashbackPage() {
                         {r.end_date && ` — ${formatDate(r.end_date)}`}
                       </td>
                       <td>
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-icon btn-sm"
-                          title="Редактировать"
-                          onClick={() => setEditingRule(r)}
-                        >
-                          <Pencil size={14} />
-                        </button>
+                        <div className="row" style={{ gap: 4 }}>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-icon btn-sm"
+                            title="Редактировать"
+                            onClick={() => setEditingRule(r)}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-icon btn-sm"
+                            title="Удалить"
+                            onClick={() => setDeletingRule(r)}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -306,6 +319,22 @@ export function CashbackPage() {
         }}
         submitting={createRule.isPending}
       />}
+
+      <ConfirmDialog
+        open={deletingRule !== null}
+        title="Удалить правило кэшбэка?"
+        message={deletingRule ? `${categoryMap[deletingRule.category_id]?.name ?? 'Категория'} · ${Number(deletingRule.cashback_percent).toFixed(2)}%` : undefined}
+        confirmLabel="Удалить"
+        loading={deleteRule.isPending}
+        onCancel={() => setDeletingRule(null)}
+        onConfirm={() => {
+          if (!deletingRule) return
+          deleteRule.mutate(deletingRule.id, {
+            onSuccess: () => { toast.success('Правило удалено'); setDeletingRule(null) },
+            onError: handleApiError,
+          })
+        }}
+      />
 
       {editingRule && selectedCardId && <RuleFormModal
         mode="edit"
