@@ -222,6 +222,13 @@ export function AnalyticsPage() {
             target="<30% оптимум"
             inverse
           />
+          <Ratio
+            label="Мелкие траты"
+            value={ratios.data?.small_transactions_ratio ?? 0}
+            description="Доля транзакций-расходов меньше 100 ₽"
+            target="<30% норма"
+            inverse
+          />
         </div>
       </div>
 

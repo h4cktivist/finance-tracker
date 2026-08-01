@@ -60,6 +60,7 @@ class RatiosResponse(BaseModel):
     savings_rate: float
     expense_to_income_ratio: float
     discretionary_spending_ratio: float
+    small_transactions_ratio: float
 
 
 class TrendPoint(BaseModel):

@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import ColumnElement
 
@@ -316,11 +316,41 @@ class AnalyticsService:
             user_id, month_start, today, investment_ids
         )
         discretionary_ratio = float(discretionary / income) if income > 0 else 0.0
+        small_transactions_ratio = await self._small_transactions_ratio(
+            user_id, month_start, today, investment_ids
+        )
         return RatiosResponse(
             savings_rate=savings_rate,
             expense_to_income_ratio=expense_ratio,
             discretionary_spending_ratio=discretionary_ratio,
+            small_transactions_ratio=small_transactions_ratio,
         )
+
+    async def _small_transactions_ratio(
+        self,
+        user_id: UUID,
+        date_from: date,
+        date_to: date,
+        investment_category_ids: list[UUID] | None = None,
+        threshold: Decimal = Decimal("100"),
+    ) -> float:
+        filters = [
+            Transaction.user_id == user_id,
+            Transaction.deleted_at.is_(None),
+            Transaction.transaction_date >= date_from,
+            Transaction.transaction_date <= date_to,
+            Transaction.type == TransactionType.EXPENSE,
+        ]
+        if investment_category_ids:
+            filters.append(self._exclude_investment_expense_clause(investment_category_ids))
+        result = await self.session.execute(
+            select(
+                func.count(Transaction.id),
+                func.sum(case((Transaction.amount < threshold, 1), else_=0)),
+            ).where(*filters)
+        )
+        total, small = result.one()
+        return float((small or 0) / total) if total else 0.0
 
     async def _sum_income_expenses(
         self,

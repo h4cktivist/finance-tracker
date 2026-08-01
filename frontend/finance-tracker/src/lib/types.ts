@@ -436,6 +436,7 @@ export type Ratios = {
   savings_rate: number
   expense_to_income_ratio: number
   discretionary_spending_ratio: number
+  small_transactions_ratio: number
 }
 
 export type TrendPoint = {
