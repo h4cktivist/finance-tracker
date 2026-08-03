@@ -79,7 +79,7 @@ class AnalyticsService:
             user_id, month_start, today, investment_ids
         )
         savings_rate = float((income - expenses) / income * 100) if income > 0 else 0.0
-        cashback = await self.cashback_repo.total_earned(user_id)
+        cashback = await self.cashback_repo.total_earned(user_id, period_month=today.strftime("%Y-%m"))
         goals = await self.goal_repo.list_by_user(user_id)
         for goal in goals:
             await self.goal_service.sync_progress(goal)

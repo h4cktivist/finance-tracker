@@ -21,6 +21,7 @@ import type {
   CashbackRuleCreate,
   CashbackRuleUpdate,
   CashbackRuleUpdateResult,
+  CashbackMonthlyPoint,
   CashbackSummary,
   Category,
   CategoryCreate,
@@ -427,6 +428,13 @@ export function useDeleteCashbackRule(cardId: string) {
       qc.invalidateQueries({ queryKey: ['cashback', 'summary'] })
       qc.invalidateQueries({ queryKey: ['cashback', 'missed'] })
     },
+  })
+}
+
+export function useCashbackMonthly(year: number) {
+  return useQuery({
+    queryKey: ['cashback', 'monthly', year],
+    queryFn: () => api.get<CashbackMonthlyPoint[]>('/cashback/monthly', { year }),
   })
 }
 

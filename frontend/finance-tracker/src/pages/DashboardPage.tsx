@@ -93,7 +93,7 @@ export function DashboardPage() {
         <div className="kpi">
           <span className="label"><Sparkles size={14} /> Кэшбэк</span>
           <span className="value mono value-positive">{formatMoney(d?.cashback_earned ?? 0)}</span>
-          <span className="hint">накоплено</span>
+          <span className="hint">за текущий месяц</span>
         </div>
         <div className="kpi">
           <span className="label"><TrendingUp size={14} /> Денежный поток</span>

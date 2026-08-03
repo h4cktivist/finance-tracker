@@ -1,4 +1,13 @@
 import { useMemo, useState } from 'react'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { CreditCard, Pencil, Plus, Sparkles, Trash2, TrendingDown, TrendingUp } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -13,6 +22,7 @@ import {
   useCategories,
   useCreateCard,
   useCreateCashbackRule,
+  useCashbackMonthly,
   useDeleteCashbackRule,
   useMissedCashback,
   useUpdateCashbackRule,
@@ -82,6 +92,8 @@ export function CashbackPage() {
           <span className="hint">кэшбэк недоступен</span>
         </div>
       </section>
+
+      <CashbackMonthlyChart />
 
       <section className="card">
         <div className="card-header">
@@ -563,5 +575,65 @@ function RuleFormModal({
         </div>
       </form>
     </Modal>
+  )
+}
+
+
+const MONTH_NAMES = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
+
+function fmtK(v: number): string {
+  if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}М`
+  if (Math.abs(v) >= 1_000) return `${Math.round(v / 1_000)}К`
+  return String(Math.round(v))
+}
+
+function CashbackMonthlyChart() {
+  const currentYear = new Date().getFullYear()
+  const [year, setYear] = useState(currentYear)
+  const { data, isLoading } = useCashbackMonthly(year)
+
+  const chartData = useMemo(() => {
+    const byMonth: Record<string, number> = {}
+    for (const p of data ?? []) byMonth[p.month] = Number(p.amount)
+    return MONTH_NAMES.map((name, i) => ({
+      name,
+      amount: byMonth[`${year}-${String(i + 1).padStart(2, '0')}`] ?? 0,
+    }))
+  }, [data, year])
+
+  return (
+    <section className="card">
+      <div className="card-header">
+        <div>
+          <h2>Динамика кэшбэка</h2>
+          <p className="card-subtitle">начисления по месяцам</p>
+        </div>
+        <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setYear(y => y - 1)}>‹</button>
+          <span className="mono" style={{ fontSize: 15, fontWeight: 600, minWidth: 44, textAlign: 'center' }}>{year}</span>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setYear(y => y + 1)} disabled={year >= currentYear}>›</button>
+        </div>
+      </div>
+      {isLoading ? (
+        <p className="dim">Загрузка…</p>
+      ) : (
+        <div style={{ height: 260 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} barCategoryGap="32%">
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,134,200,0.12)" vertical={false} />
+              <XAxis dataKey="name" stroke="#8a94c4" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="#8a94c4" fontSize={11} tickLine={false} axisLine={false} tickFormatter={fmtK} width={44} />
+              <Tooltip
+                formatter={(v) => [formatMoney(Number(v)), 'Кэшбэк']}
+                contentStyle={{ background: '#141c3c', border: '1px solid rgba(120,134,200,0.28)', borderRadius: 10 }}
+                labelStyle={{ color: '#e8ecff' }}
+                itemStyle={{ color: '#e8ecff' }}
+              />
+              <Bar dataKey="amount" fill="#a78bfa" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </section>
   )
 }

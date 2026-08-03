@@ -101,6 +101,19 @@ class CashbackAccrualRepository(BaseRepository[CashbackAccrual]):
         result = await self.session.execute(stmt.order_by(CashbackAccrual.period_month.desc()))
         return list(result.scalars().all())
 
+    async def earned_by_month(self, user_id: UUID, year: int) -> list[tuple[str, Decimal]]:
+        result = await self.session.execute(
+            select(CashbackAccrual.period_month, func.coalesce(func.sum(CashbackAccrual.amount), 0))
+            .where(
+                CashbackAccrual.user_id == user_id,
+                CashbackAccrual.status == CashbackAccrualStatus.ACCRUED,
+                CashbackAccrual.period_month.like(f"{year}-%"),
+            )
+            .group_by(CashbackAccrual.period_month)
+            .order_by(CashbackAccrual.period_month)
+        )
+        return [(row[0], Decimal(str(row[1]))) for row in result.all()]
+
     async def total_earned(self, user_id: UUID, period_month: str | None = None) -> Decimal:
         stmt = select(func.coalesce(func.sum(CashbackAccrual.amount), 0)).where(
             CashbackAccrual.user_id == user_id,

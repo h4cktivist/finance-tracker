@@ -312,6 +312,11 @@ export type CashbackSummary = {
   period_month: string | null
 }
 
+export type CashbackMonthlyPoint = {
+  month: string
+  amount: string
+}
+
 export type CashbackRecommendation = {
   category_id: string
   best_card_id: string

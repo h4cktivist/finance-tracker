@@ -93,6 +93,11 @@ class CashbackAccrualResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CashbackMonthlyPoint(BaseModel):
+    month: str
+    amount: Decimal
+
+
 class CashbackManualSet(BaseModel):
     amount: Decimal = Field(ge=0, description="Сумма кэшбэка; 0 — удалить начисление.")
     card_id: str | None = Field(

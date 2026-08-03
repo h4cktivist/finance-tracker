@@ -13,6 +13,7 @@ from app.schemas.cashback import (
     CardCreate,
     CardResponse,
     CashbackAccrualResponse,
+    CashbackMonthlyPoint,
     CashbackRecommendation,
     CashbackRuleCreate,
     CashbackRuleResponse,
@@ -135,6 +136,17 @@ async def list_rules(card_id: UUID, user: CurrentUser, db: DbSession) -> APIResp
     rule_repo = CashbackRuleRepository(db)
     rules = await rule_repo.list_for_card(card_id)
     return APIResponse(data=[_rule_response(r) for r in rules])
+
+
+@router.get("/monthly", response_model=APIResponse[list[CashbackMonthlyPoint]])
+async def cashback_monthly(
+    user: CurrentUser,
+    db: DbSession,
+    year: int = Query(...),
+) -> APIResponse[list[CashbackMonthlyPoint]]:
+    repo = CashbackAccrualRepository(db)
+    rows = await repo.earned_by_month(user.id, year)
+    return APIResponse(data=[CashbackMonthlyPoint(month=m, amount=a) for m, a in rows])
 
 
 @router.get("/summary", response_model=APIResponse[CashbackSummaryResponse])
