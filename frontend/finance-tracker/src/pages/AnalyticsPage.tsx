@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { ExcludeInvestmentsToggle } from '@/components/ExcludeInvestmentsToggle'
 import { useAnalyticsPreferences } from '@/context/AnalyticsPreferencesContext'
 import { useForecast, useHeatmap, useRatios, useStatistics, useTrends } from '@/hooks/useQueries'
@@ -31,6 +32,7 @@ function defaultRange(daysBack: number) {
 export function AnalyticsPage() {
   const { excludeInvestments } = useAnalyticsPreferences()
   const [range, setRange] = useState<{ from: string; to: string }>(() => defaultRange(30))
+  const [expenseListOpen, setExpenseListOpen] = useState(false)
   const stats = useStatistics(range.from, range.to, excludeInvestments)
   const heat = useHeatmap(range.from, range.to, excludeInvestments)
   const trends = useTrends(range.from, range.to, excludeInvestments)
@@ -130,21 +132,33 @@ export function AnalyticsPage() {
           )}
           {expenses.length > 0 && (
             <div style={{ marginTop: 10 }}>
-              <table className="table">
-                <tbody>
-                  {expenses.map((e) => (
-                    <tr key={e.name}>
-                      <td>
-                        <span className="row" style={{ gap: 8 }}>
-                          <span className="color-swatch" style={{ background: e.color, margin: 0 }} />
-                          {e.name}
-                        </span>
-                      </td>
-                      <td className="mono" style={{ textAlign: 'right' }}>{formatMoney(e.value)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setExpenseListOpen((prev) => !prev)}
+                aria-expanded={expenseListOpen}
+                style={{ gap: 6 }}
+              >
+                {expenseListOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                {expenseListOpen ? 'Скрыть категории' : `Показать категории (${expenses.length})`}
+              </button>
+              {expenseListOpen && (
+                <table className="table" style={{ marginTop: 8 }}>
+                  <tbody>
+                    {expenses.map((e) => (
+                      <tr key={e.name}>
+                        <td>
+                          <span className="row" style={{ gap: 8 }}>
+                            <span className="color-swatch" style={{ background: e.color, margin: 0 }} />
+                            {e.name}
+                          </span>
+                        </td>
+                        <td className="mono" style={{ textAlign: 'right' }}>{formatMoney(e.value)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
         </div>
