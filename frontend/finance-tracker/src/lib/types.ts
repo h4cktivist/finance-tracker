@@ -340,6 +340,33 @@ export type CashbackManualSet = {
   card_id?: string | null
 }
 
+export type CashbackPayoutCardPreview = {
+  card_id: string
+  card_name: string
+  account_id: string
+  accrued_amount: string
+  already_paid_out: boolean
+}
+
+export type CashbackPayoutPreview = {
+  period_month: string
+  cards: CashbackPayoutCardPreview[]
+}
+
+export type CashbackPayoutCreate = {
+  card_id: string
+  period_month?: string | null
+  amount?: string | number | null
+}
+
+export type CashbackPayout = {
+  id: string
+  card_id: string
+  period_month: string
+  amount: string
+  transaction_id: string
+}
+
 export type GoalStatus = 'active' | 'completed' | 'cancelled'
 
 export type Goal = {

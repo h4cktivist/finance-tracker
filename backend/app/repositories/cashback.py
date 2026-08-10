@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import case, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.cashback import CashbackAccrual, CashbackAccrualStatus
+from app.models.cashback import CashbackAccrual, CashbackAccrualStatus, CashbackPayout
 from app.models.transaction import Transaction
 from app.repositories.base import BaseRepository
 
@@ -123,3 +123,49 @@ class CashbackAccrualRepository(BaseRepository[CashbackAccrual]):
             stmt = stmt.where(CashbackAccrual.period_month == period_month)
         result = await self.session.execute(stmt)
         return Decimal(str(result.scalar_one()))
+
+    async def earned_by_card(self, user_id: UUID, period_month: str) -> dict[UUID, Decimal]:
+        result = await self.session.execute(
+            select(CashbackAccrual.card_id, func.coalesce(func.sum(CashbackAccrual.amount), 0))
+            .where(
+                CashbackAccrual.user_id == user_id,
+                CashbackAccrual.status == CashbackAccrualStatus.ACCRUED,
+                CashbackAccrual.period_month == period_month,
+            )
+            .group_by(CashbackAccrual.card_id)
+        )
+        return {row[0]: Decimal(str(row[1])) for row in result.all()}
+
+
+class CashbackPayoutRepository(BaseRepository[CashbackPayout]):
+
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(session, CashbackPayout)
+
+    async def get_for_card_period(
+        self, card_id: UUID, period_month: str
+    ) -> CashbackPayout | None:
+        result = await self.session.execute(
+            select(CashbackPayout).where(
+                CashbackPayout.card_id == card_id,
+                CashbackPayout.period_month == period_month,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def list_paid_card_ids(self, user_id: UUID, period_month: str) -> set[UUID]:
+        """Карты с уже выплаченным кэшбэком за период (удалённые транзакции не считаются)."""
+        result = await self.session.execute(
+            select(CashbackPayout.card_id)
+            .join(Transaction, CashbackPayout.transaction_id == Transaction.id)
+            .where(
+                CashbackPayout.user_id == user_id,
+                CashbackPayout.period_month == period_month,
+                Transaction.deleted_at.is_(None),
+            )
+        )
+        return set(result.scalars().all())
+
+    async def delete(self, payout: CashbackPayout) -> None:
+        await self.session.delete(payout)
+        await self.session.flush()

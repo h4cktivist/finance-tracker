@@ -4,23 +4,57 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.models.card import Card
-from app.models.cashback import CashbackAccrual, CashbackAccrualStatus, CashbackRule
+from app.models.cashback import (
+    CashbackAccrual,
+    CashbackAccrualStatus,
+    CashbackPayout,
+    CashbackRule,
+)
+from app.models.category import Category, CategoryType
 from app.models.transaction import Transaction, TransactionType
 from app.repositories.account import AccountRepository
 from app.repositories.card import CardRepository, CashbackRuleRepository
-from app.repositories.cashback import CashbackAccrualRepository
+from app.repositories.cashback import CashbackAccrualRepository, CashbackPayoutRepository
 from app.repositories.category import CategoryRepository
 from app.repositories.transaction import TransactionRepository
 from app.schemas.cashback import (
     CardCreate,
+    CashbackPayoutCardPreview,
+    CashbackPayoutCreate,
+    CashbackPayoutPreview,
     CashbackRecommendation,
     CashbackRuleCreate,
     CashbackRuleUpdate,
 )
+from app.schemas.transaction import TransactionCreate
 from app.services.audit import AuditService
 from app.services.notification import NotificationService
+
+CASHBACK_CATEGORY_NAME = "Кэшбэк"
+
+_MONTH_NAMES_GENITIVE = (
+    "января",
+    "февраля",
+    "марта",
+    "апреля",
+    "мая",
+    "июня",
+    "июля",
+    "августа",
+    "сентября",
+    "октября",
+    "ноября",
+    "декабря",
+)
+
+
+def previous_period_month(today: date | None = None) -> str:
+    """Прошлый месяц в формате `YYYY-MM`."""
+    ref = today or date.today()
+    year, month = (ref.year - 1, 12) if ref.month == 1 else (ref.year, ref.month - 1)
+    return f"{year}-{month:02d}"
 
 
 class CashbackService:
@@ -32,6 +66,7 @@ class CashbackService:
         self.category_repo = CategoryRepository(session)
         self.rule_repo = CashbackRuleRepository(session)
         self.accrual_repo = CashbackAccrualRepository(session)
+        self.payout_repo = CashbackPayoutRepository(session)
         self.tx_repo = TransactionRepository(session)
         self.audit = AuditService(session)
         self.notifications = NotificationService(session)
@@ -338,6 +373,124 @@ class CashbackService:
             entity_id=transaction_id,
             ip_address=ip,
         )
+
+    async def get_payout_preview(
+        self, user_id: UUID, period_month: str | None = None
+    ) -> CashbackPayoutPreview:
+        period = period_month or previous_period_month()
+        cards = await self.card_repo.list_by_user(user_id)
+        earned = await self.accrual_repo.earned_by_card(user_id, period)
+        paid_card_ids = await self.payout_repo.list_paid_card_ids(user_id, period)
+        return CashbackPayoutPreview(
+            period_month=period,
+            cards=[
+                CashbackPayoutCardPreview(
+                    card_id=str(card.id),
+                    card_name=card.name,
+                    account_id=str(card.account_id),
+                    accrued_amount=earned.get(card.id, Decimal("0")),
+                    already_paid_out=card.id in paid_card_ids,
+                )
+                for card in cards
+            ],
+        )
+
+    async def accrue_payout(
+        self, user_id: UUID, data: CashbackPayoutCreate, ip: str | None = None
+    ) -> CashbackPayout:
+        """Начислить накопленный за месяц кэшбэк как доходную транзакцию по карте."""
+        period = data.period_month or previous_period_month()
+        card = await self.card_repo.get_by_id_for_user(UUID(data.card_id), user_id)
+        if card is None:
+            raise NotFoundError("Card not found")
+
+        existing = await self.payout_repo.get_for_card_period(card.id, period)
+        if existing is not None:
+            previous_tx = await self.tx_repo.get_by_id_for_user(existing.transaction_id, user_id)
+            if previous_tx is not None:
+                raise ConflictError(
+                    f"Кэшбэк за {period} по карте «{card.name}» уже начислен"
+                )
+            # Транзакция удалена — прошлая выплата больше не действует, начисляем заново.
+            await self.payout_repo.delete(existing)
+
+        if data.amount is not None:
+            amount = data.amount
+        else:
+            earned = await self.accrual_repo.earned_by_card(user_id, period)
+            amount = earned.get(card.id, Decimal("0"))
+        if amount <= 0:
+            raise ValidationError(f"Нет накопленного кэшбэка за {period} по карте «{card.name}»")
+
+        category = await self._get_or_create_cashback_category(user_id)
+        transaction = await self._create_payout_transaction(user_id, card, category, period, amount)
+
+        payout = CashbackPayout(
+            user_id=user_id,
+            card_id=card.id,
+            transaction_id=transaction.id,
+            period_month=period,
+            amount=amount,
+        )
+        await self.payout_repo.create(payout)
+        await self.audit.log(
+            "create",
+            "cashback_payout",
+            user_id=user_id,
+            entity_id=payout.id,
+            payload={
+                "card_id": str(card.id),
+                "period_month": period,
+                "amount": str(amount),
+                "transaction_id": str(transaction.id),
+            },
+            ip_address=ip,
+        )
+        return payout
+
+    async def _get_or_create_cashback_category(self, user_id: UUID) -> Category:
+        category = await self.category_repo.find_by_name(
+            user_id, CASHBACK_CATEGORY_NAME, CategoryType.INCOME
+        )
+        if category is not None:
+            return category
+        category = Category(
+            user_id=user_id,
+            name=CASHBACK_CATEGORY_NAME,
+            type=CategoryType.INCOME,
+            is_essential=False,
+        )
+        return await self.category_repo.create(category)
+
+    async def _create_payout_transaction(
+        self,
+        user_id: UUID,
+        card: Card,
+        category: Category,
+        period_month: str,
+        amount: Decimal,
+    ) -> Transaction:
+        from app.services.ledger import TransactionService
+
+        year, month = period_month.split("-")
+        description = (
+            f"Кэшбэк за {_MONTH_NAMES_GENITIVE[int(month) - 1]} {year} · {card.name}"
+        )
+        transaction = await TransactionService(self.session).create(
+            user_id,
+            TransactionCreate(
+                account_id=str(card.account_id),
+                category_id=str(category.id),
+                type=TransactionType.INCOME,
+                amount=amount,
+                description=description,
+                transaction_date=date.today(),
+                card_id=str(card.id),
+            ),
+            run_cashback=False,
+        )
+        assert not isinstance(transaction, list)
+        return transaction
 
     async def get_recommendations(
         self, user_id: UUID, category_id: UUID

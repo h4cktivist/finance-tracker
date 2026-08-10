@@ -10,10 +10,14 @@ from app.models.cashback import CashbackAccrualStatus
 from app.repositories.card import CardRepository, CashbackRuleRepository
 from app.repositories.cashback import CashbackAccrualRepository
 from app.schemas.cashback import (
+    PERIOD_MONTH_PATTERN,
     CardCreate,
     CardResponse,
     CashbackAccrualResponse,
     CashbackMonthlyPoint,
+    CashbackPayoutCreate,
+    CashbackPayoutPreview,
+    CashbackPayoutResponse,
     CashbackRecommendation,
     CashbackRuleCreate,
     CashbackRuleResponse,
@@ -175,6 +179,36 @@ async def missed_cashback(user: CurrentUser, db: DbSession) -> APIResponse:
             )
             for a in accruals
         ]
+    )
+
+
+@router.get("/payout/preview", response_model=APIResponse[CashbackPayoutPreview])
+async def payout_preview(
+    user: CurrentUser,
+    db: DbSession,
+    period_month: Annotated[str | None, Query(pattern=PERIOD_MONTH_PATTERN)] = None,
+) -> APIResponse[CashbackPayoutPreview]:
+    service = CashbackService(db)
+    return APIResponse(data=await service.get_payout_preview(user.id, period_month))
+
+
+@router.post("/payout", response_model=APIResponse[CashbackPayoutResponse])
+async def create_payout(
+    data: CashbackPayoutCreate,
+    user: CurrentUser,
+    db: DbSession,
+    ip: Annotated[str | None, Depends(get_client_ip)] = None,
+) -> APIResponse[CashbackPayoutResponse]:
+    service = CashbackService(db)
+    payout = await service.accrue_payout(user.id, data, ip=ip)
+    return APIResponse(
+        data=CashbackPayoutResponse(
+            id=str(payout.id),
+            card_id=str(payout.card_id),
+            period_month=payout.period_month,
+            amount=payout.amount,
+            transaction_id=str(payout.transaction_id),
+        )
     )
 
 

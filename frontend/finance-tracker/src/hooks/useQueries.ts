@@ -16,6 +16,9 @@ import type {
   CardCreate,
   CashbackAccrual,
   CashbackManualSet,
+  CashbackPayout,
+  CashbackPayoutCreate,
+  CashbackPayoutPreview,
   CashbackRecommendation,
   CashbackRule,
   CashbackRuleCreate,
@@ -450,6 +453,33 @@ export function useMissedCashback() {
   return useQuery({
     queryKey: ['cashback', 'missed'],
     queryFn: () => api.get<CashbackAccrual[]>('/cashback/missed'),
+  })
+}
+
+export function useCashbackPayoutPreview(periodMonth?: string, enabled = true) {
+  return useQuery({
+    queryKey: ['cashback', 'payout', 'preview', periodMonth ?? 'previous'],
+    queryFn: () =>
+      api.get<CashbackPayoutPreview>(
+        '/cashback/payout/preview',
+        periodMonth ? { period_month: periodMonth } : undefined,
+      ),
+    enabled,
+  })
+}
+
+export function useCreateCashbackPayout() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: CashbackPayoutCreate) =>
+      api.post<CashbackPayout>('/cashback/payout', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cashback'] })
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['accounts'] })
+      qc.invalidateQueries({ queryKey: ['categories'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
   })
 }
 

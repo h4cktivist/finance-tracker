@@ -104,3 +104,41 @@ class CashbackManualSet(BaseModel):
         default=None,
         description="Карта для начисления; если не указана — карта из транзакции.",
     )
+
+
+PERIOD_MONTH_PATTERN = r"^\d{4}-(0[1-9]|1[0-2])$"
+
+
+class CashbackPayoutCardPreview(BaseModel):
+    card_id: str
+    card_name: str
+    account_id: str
+    accrued_amount: Decimal
+    already_paid_out: bool = False
+
+
+class CashbackPayoutPreview(BaseModel):
+    period_month: str
+    cards: list[CashbackPayoutCardPreview]
+
+
+class CashbackPayoutCreate(BaseModel):
+    card_id: str
+    period_month: str | None = Field(
+        default=None,
+        pattern=PERIOD_MONTH_PATTERN,
+        description="Месяц начисления `YYYY-MM`; по умолчанию — прошлый месяц.",
+    )
+    amount: Decimal | None = Field(
+        default=None,
+        gt=0,
+        description="Сумма выплаты; по умолчанию — накопленный кэшбэк за период.",
+    )
+
+
+class CashbackPayoutResponse(BaseModel):
+    id: str
+    card_id: str
+    period_month: str
+    amount: Decimal
+    transaction_id: str

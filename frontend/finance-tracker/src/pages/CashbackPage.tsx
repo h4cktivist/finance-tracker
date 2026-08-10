@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { CreditCard, Pencil, Plus, Sparkles, Trash2, TrendingDown, TrendingUp } from 'lucide-react'
+import { CreditCard, HandCoins, Pencil, Plus, Sparkles, Trash2, TrendingDown, TrendingUp } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -17,20 +17,29 @@ import {
   useAccounts,
   useCardRules,
   useCards,
+  useCashbackPayoutPreview,
   useCashbackRecommendations,
   useCashbackSummary,
   useCategories,
   useCreateCard,
+  useCreateCashbackPayout,
   useCreateCashbackRule,
   useCashbackMonthly,
   useDeleteCashbackRule,
   useMissedCashback,
   useUpdateCashbackRule,
 } from '@/hooks/useQueries'
-import type { CashbackRule } from '@/lib/types'
+import type { CashbackPayoutPreview, CashbackRule } from '@/lib/types'
 import { ConfirmDialog, Modal } from '@/components/Modal'
 import { EmptyState } from '@/components/EmptyState'
-import { currentMonthEndIso, currentMonthStartIso, formatDate, formatMoney, todayIso } from '@/lib/format'
+import {
+  currentMonthEndIso,
+  currentMonthStartIso,
+  formatDate,
+  formatMoney,
+  formatPeriodMonth,
+  todayIso,
+} from '@/lib/format'
 import { handleApiError } from '@/lib/errors'
 
 function isRuleActive(rule: CashbackRule, today: string): boolean {
@@ -47,6 +56,7 @@ export function CashbackPage() {
   const [recCategory, setRecCategory] = useState<string>('')
   const [showExpiredRules, setShowExpiredRules] = useState(false)
   const [deletingRule, setDeletingRule] = useState<CashbackRule | null>(null)
+  const [payoutOpen, setPayoutOpen] = useState(false)
 
   const cards = useCards()
   const accounts = useAccounts()
@@ -68,6 +78,9 @@ export function CashbackPage() {
   )
   const accountMap = Object.fromEntries((accounts.data ?? []).map((a) => [a.id, a]))
   const categoryMap = Object.fromEntries((categories.data ?? []).map((c) => [c.id, c]))
+
+  const payoutPreview = useCashbackPayoutPreview(undefined, payoutOpen)
+  const createPayout = useCreateCashbackPayout()
 
   const createCard = useCreateCard()
   const createRule = useCreateCashbackRule(selectedCardId ?? '')
@@ -98,9 +111,23 @@ export function CashbackPage() {
       <section className="card">
         <div className="card-header">
           <h2>Карты</h2>
-          <button className="btn btn-primary btn-sm" onClick={() => setCreateCardOpen(true)}>
-            <Plus size={14} /> Добавить карту
-          </button>
+          <div className="row" style={{ gap: 8 }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setPayoutOpen(true)}
+              disabled={!cards.data || cards.data.length === 0}
+              title={
+                !cards.data || cards.data.length === 0
+                  ? 'Сначала добавьте карту'
+                  : undefined
+              }
+            >
+              <HandCoins size={14} /> Начислить кэшбэк за прошлый месяц
+            </button>
+            <button className="btn btn-primary btn-sm" onClick={() => setCreateCardOpen(true)}>
+              <Plus size={14} /> Добавить карту
+            </button>
+          </div>
         </div>
         {!cards.data || cards.data.length === 0 ? (
           <EmptyState
@@ -293,6 +320,27 @@ export function CashbackPage() {
         </div>
       </section>
 
+      {payoutOpen && <PayoutModal
+        preview={payoutPreview.data}
+        loading={payoutPreview.isLoading}
+        initialCardId={selectedCardId}
+        onClose={() => setPayoutOpen(false)}
+        onSubmit={async (cardId, amount) => {
+          try {
+            const result = await createPayout.mutateAsync({
+              card_id: cardId,
+              period_month: payoutPreview.data?.period_month ?? null,
+              amount,
+            })
+            toast.success(`Кэшбэк начислен: ${formatMoney(result.amount)}`)
+            setPayoutOpen(false)
+          } catch (e) {
+            handleApiError(e)
+          }
+        }}
+        submitting={createPayout.isPending}
+      />}
+
       {createCardOpen && <CreateCardModal
         onClose={() => setCreateCardOpen(false)}
         accounts={accounts.data ?? []}
@@ -438,6 +486,119 @@ function CreateCardModal({
           </button>
         </div>
       </form>
+    </Modal>
+  )
+}
+
+/** Карта, выбранная на странице; иначе первая с непогашенным накоплением. */
+function defaultPayoutCardId(
+  cards: CashbackPayoutPreview['cards'],
+  initialCardId: string | null,
+): string {
+  if (cards.length === 0) return ''
+  const payable = cards.find((c) => Number(c.accrued_amount) > 0 && !c.already_paid_out)
+  return (cards.find((c) => c.card_id === initialCardId) ?? payable ?? cards[0]).card_id
+}
+
+function PayoutModal({
+  preview, loading, initialCardId, onClose, onSubmit, submitting,
+}: {
+  preview: CashbackPayoutPreview | undefined
+  loading: boolean
+  initialCardId: string | null
+  onClose: () => void
+  onSubmit: (cardId: string, amount: string) => void
+  submitting: boolean
+}) {
+  const [pickedCardId, setPickedCardId] = useState<string | null>(null)
+  const [editedAmount, setEditedAmount] = useState<{ cardId: string; value: string } | null>(null)
+  const cards = preview?.cards ?? []
+
+  const cardId = pickedCardId ?? defaultPayoutCardId(cards, initialCardId)
+  const selected = cards.find((c) => c.card_id === cardId)
+  const accrued = selected?.accrued_amount ?? null
+
+  // Сумма берётся из накопленного за период, пока пользователь её не изменил
+  const suggestedAmount = accrued !== null && Number(accrued) > 0 ? String(accrued) : ''
+  const amount = editedAmount?.cardId === cardId ? editedAmount.value : suggestedAmount
+
+  const amountValid = Number(amount) > 0
+  const blocked = !selected || selected.already_paid_out
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Начислить кэшбэк за прошлый месяц"
+      subtitle={preview ? `Период: ${formatPeriodMonth(preview.period_month)}` : undefined}
+    >
+      {loading ? (
+        <p className="dim">Загрузка…</p>
+      ) : cards.length === 0 ? (
+        <div className="empty"><p>Нет карт для начисления</p></div>
+      ) : (
+        <form onSubmit={(e) => {
+          e.preventDefault()
+          if (blocked) return
+          if (!amountValid) {
+            toast.error('Укажите сумму больше нуля')
+            return
+          }
+          onSubmit(cardId, amount)
+        }}>
+          <div className="field">
+            <label>Карта</label>
+            <select
+              className="select"
+              value={cardId}
+              onChange={(e) => setPickedCardId(e.target.value)}
+            >
+              {cards.map((c) => (
+                <option key={c.card_id} value={c.card_id}>
+                  {c.card_name} — {formatMoney(c.accrued_amount)}
+                  {c.already_paid_out ? ' (уже начислен)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field" style={{ marginTop: 12 }}>
+            <label>Сумма начисления</label>
+            <input
+              className="input mono"
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={amount}
+              onChange={(e) => setEditedAmount({ cardId, value: e.target.value })}
+            />
+            <span className="hint" style={{ display: 'block', marginTop: 6 }}>
+              Накоплено по правилам за период: {formatMoney(accrued ?? 0)} — сумму можно изменить
+            </span>
+          </div>
+
+          {selected?.already_paid_out ? (
+            <div style={{
+              marginTop: 14, padding: 12, borderRadius: 10,
+              background: 'rgba(239,71,97,0.08)', fontSize: 13,
+            }}>
+              Кэшбэк за этот месяц по карте «{selected.card_name}» уже начислен.
+              Удалите созданную операцию, если хотите начислить заново.
+            </div>
+          ) : (
+            <p className="hint" style={{ marginTop: 14 }}>
+              Будет создана доходная операция в категории «Кэшбэк» по счёту карты.
+            </p>
+          )}
+
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Отмена</button>
+            <button type="submit" className="btn btn-primary" disabled={submitting || blocked}>
+              {submitting ? '…' : 'Начислить'}
+            </button>
+          </div>
+        </form>
+      )}
     </Modal>
   )
 }

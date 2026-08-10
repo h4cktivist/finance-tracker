@@ -46,6 +46,16 @@ export function todayIso(): string {
   return format(new Date(), 'yyyy-MM-dd')
 }
 
+/** `2026-07` → `июль 2026` */
+export function formatPeriodMonth(value: string | null | undefined): string {
+  if (!value) return '—'
+  try {
+    return format(parseISO(`${value}-01`), 'LLLL yyyy', { locale: ru })
+  } catch {
+    return value
+  }
+}
+
 export function currentMonthStartIso(): string {
   return toIsoDate(startOfMonth(new Date()))
 }

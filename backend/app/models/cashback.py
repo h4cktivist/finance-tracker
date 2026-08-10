@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.db.enums import pg_enum
-from app.db.mixins import UUIDPrimaryKeyMixin
+from app.db.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class CashbackAccrualStatus(StrEnum):
@@ -57,4 +57,24 @@ class CashbackAccrual(Base, UUIDPrimaryKeyMixin):
     )
     __table_args__ = (
         UniqueConstraint("transaction_id", "card_id", name="uq_cashback_accrual_tx_card"),
+    )
+
+
+class CashbackPayout(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    """Выплата накопленного кэшбэка за месяц: доходная транзакция по карте."""
+
+    __tablename__ = "cashback_payouts"
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    card_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cards.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    transaction_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False
+    )
+    period_month: Mapped[str] = mapped_column(String(7), index=True, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    __table_args__ = (
+        UniqueConstraint("card_id", "period_month", name="uq_cashback_payout_card_period"),
     )

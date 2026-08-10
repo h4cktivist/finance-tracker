@@ -2,7 +2,7 @@ from app.models.account import Account
 from app.models.audit_log import AuditLog
 from app.models.budget import Budget
 from app.models.card import Card
-from app.models.cashback import CashbackAccrual, CashbackRule
+from app.models.cashback import CashbackAccrual, CashbackPayout, CashbackRule
 from app.models.category import Category
 from app.models.financial_goal import FinancialGoal
 from app.models.ledger import LedgerEntry
@@ -30,6 +30,7 @@ __all__ = [
     "Card",
     "CashbackRule",
     "CashbackAccrual",
+    "CashbackPayout",
     "FinancialGoal",
     "Notification",
 ]
