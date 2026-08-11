@@ -476,6 +476,7 @@ Authorization: Bearer <access_token>
 | GET | `/` | Список целей |
 | GET | `/{goal_id}/progress` | Прогресс |
 | PATCH | `/{goal_id}` | Обновить |
+| DELETE | `/{goal_id}` | Удалить цель |
 
 Поле `current_amount` синхронизируется с балансом счёта `linked_account_id`, если он указан.
 
@@ -507,6 +508,10 @@ Authorization: Bearer <access_token>
 | `target_amount` | decimal | Целевая сумма (> 0) |
 | `deadline` | date | Срок |
 | `status` | enum | `active`, `completed`, `cancelled` |
+
+#### DELETE `/{goal_id}`
+
+Удаляет цель безвозвратно. Привязанный счёт и его операции не затрагиваются. Чужая или уже удалённая цель — `404`.
 
 ---
 

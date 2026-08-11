@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends
 
 from app.core.deps import CurrentUser, DbSession, get_client_ip
 from app.core.responses import APIResponse
-from app.repositories.goal import GoalRepository
 from app.schemas.goal import GoalCreate, GoalProgressResponse, GoalResponse, GoalUpdate
 from app.services.goal import GoalService
 
@@ -66,3 +65,15 @@ async def update_goal(
     service = GoalService(db)
     goal = await service.update(user.id, goal_id, data, ip=ip)
     return APIResponse(data=_goal_response(goal))
+
+
+@router.delete("/{goal_id}", response_model=APIResponse[None])
+async def delete_goal(
+    goal_id: UUID,
+    user: CurrentUser,
+    db: DbSession,
+    ip: Annotated[str | None, Depends(get_client_ip)] = None,
+) -> APIResponse[None]:
+    service = GoalService(db)
+    await service.delete(user.id, goal_id, ip=ip)
+    return APIResponse(message="Goal deleted")

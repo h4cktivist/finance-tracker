@@ -524,6 +524,17 @@ export function useUpdateGoal() {
   })
 }
 
+export function useDeleteGoal() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<null>(`/goals/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: goalsKey })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+}
+
 // === Analytics ===
 function analyticsParams(
   excludeInvestments: boolean,

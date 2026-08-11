@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle2, Goal as GoalIcon, Pencil, Plus } from 'lucide-react'
+import { CheckCircle2, Goal as GoalIcon, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -7,11 +7,12 @@ import { toast } from 'sonner'
 import {
   useAccounts,
   useCreateGoal,
+  useDeleteGoal,
   useGoals,
   useUpdateGoal,
 } from '@/hooks/useQueries'
 import type { Goal, GoalStatus } from '@/lib/types'
-import { Modal } from '@/components/Modal'
+import { ConfirmDialog, Modal } from '@/components/Modal'
 import { EmptyState } from '@/components/EmptyState'
 import { formatDate, formatMoney } from '@/lib/format'
 import { handleApiError } from '@/lib/errors'
@@ -34,11 +35,13 @@ type FormValues = z.infer<typeof schema>
 export function GoalsPage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Goal | null>(null)
+  const [deleting, setDeleting] = useState<Goal | null>(null)
 
   const goals = useGoals()
   const accounts = useAccounts()
   const create = useCreateGoal()
   const update = useUpdateGoal()
+  const remove = useDeleteGoal()
 
   const accMap = Object.fromEntries((accounts.data ?? []).map((a) => [a.id, a]))
 
@@ -94,8 +97,19 @@ export function GoalsPage() {
                         <CheckCircle2 size={14} />
                       </button>
                     )}
-                    <button className="btn btn-ghost btn-icon btn-sm" onClick={() => { setEditing(g); setOpen(true) }}>
+                    <button
+                      className="btn btn-ghost btn-icon btn-sm"
+                      onClick={() => { setEditing(g); setOpen(true) }}
+                      title="Редактировать"
+                    >
                       <Pencil size={14} />
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-icon btn-sm"
+                      onClick={() => setDeleting(g)}
+                      title="Удалить"
+                    >
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>
@@ -161,6 +175,26 @@ export function GoalsPage() {
           }
         }}
         submitting={create.isPending || update.isPending}
+      />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Удалить цель?"
+        message={
+          deleting
+            ? `${deleting.name} · ${formatMoney(deleting.current_amount)} из ${formatMoney(deleting.target_amount)}`
+            : undefined
+        }
+        confirmLabel="Удалить"
+        loading={remove.isPending}
+        onCancel={() => setDeleting(null)}
+        onConfirm={() => {
+          if (!deleting) return
+          remove.mutate(deleting.id, {
+            onSuccess: () => { toast.success('Цель удалена'); setDeleting(null) },
+            onError: handleApiError,
+          })
+        }}
       />
     </>
   )

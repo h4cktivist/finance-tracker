@@ -108,3 +108,11 @@ class GoalService:
         await self.session.flush()
         await self.audit.log("update", "goal", user_id=user_id, entity_id=goal.id, ip_address=ip)
         return goal
+
+    async def delete(self, user_id: UUID, goal_id: UUID, ip: str | None = None) -> None:
+        goal = await self.repo.get_by_id_for_user(goal_id, user_id)
+        if goal is None:
+            raise NotFoundError("Goal not found")
+        await self.session.delete(goal)
+        await self.session.flush()
+        await self.audit.log("delete", "goal", user_id=user_id, entity_id=goal_id, ip_address=ip)
