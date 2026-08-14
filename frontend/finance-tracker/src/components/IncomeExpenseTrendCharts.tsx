@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   CartesianGrid,
   Line,
@@ -8,10 +8,13 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import type { MouseHandlerDataParam } from 'recharts'
 import { differenceInCalendarDays, format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import type { TrendPoint } from '@/lib/types'
 import { formatMoney } from '@/lib/format'
+import { DayTransactionsModal } from '@/components/DayTransactionsModal'
+import type { DaySelection } from '@/components/DayTransactionsModal'
 
 const TOOLTIP_STYLE = {
   background: '#141c3c',
@@ -51,6 +54,7 @@ function TrendLineChart({
   color,
   rows,
   rangeDays,
+  onSelectDay,
 }: {
   title: string
   subtitle: string
@@ -58,8 +62,16 @@ function TrendLineChart({
   color: string
   rows: ChartRow[]
   rangeDays: number
+  onSelectDay: (selection: DaySelection) => void
 }) {
   const tickFormatter = (value: string) => formatTick(value, rangeDays)
+
+  // Клик по области дня открывает разбивку; пустые дни открывать нечем
+  function handleChartClick(state: MouseHandlerDataParam) {
+    const row = rows.find((r) => r.date === String(state.activeLabel ?? ''))
+    if (!row || row[dataKey] <= 0) return
+    onSelectDay({ date: row.date, kind: dataKey, total: row[dataKey] })
+  }
 
   return (
     <div className="card">
@@ -70,9 +82,9 @@ function TrendLineChart({
       {!hasAnyValue(rows, dataKey) ? (
         <div className="empty"><p>Нет данных за период</p></div>
       ) : (
-        <div className="chart-area">
+        <div className="chart-area" style={{ cursor: 'pointer' }}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={rows}>
+            <LineChart data={rows} onClick={handleChartClick}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,134,200,0.12)" />
               <XAxis
                 dataKey="date"
@@ -95,11 +107,16 @@ function TrendLineChart({
                 stroke={color}
                 strokeWidth={2}
                 dot={rows.length <= 31 ? { r: 3, fill: color } : false}
-                activeDot={{ r: 5 }}
+                activeDot={{ r: 5, cursor: 'pointer' }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
+      )}
+      {hasAnyValue(rows, dataKey) && (
+        <span className="hint" style={{ display: 'block', marginTop: 8 }}>
+          Нажмите на день, чтобы увидеть операции
+        </span>
       )}
     </div>
   )
@@ -113,6 +130,7 @@ type Props = {
 }
 
 export function IncomeExpenseTrendCharts({ points, dateFrom, dateTo, periodLabel }: Props) {
+  const [selectedDay, setSelectedDay] = useState<DaySelection | null>(null)
   const rows = useMemo(() => toChartRows(points ?? []), [points])
   const rangeDays = useMemo(
     () => Math.max(1, differenceInCalendarDays(parseISO(dateTo), parseISO(dateFrom)) + 1),
@@ -121,23 +139,34 @@ export function IncomeExpenseTrendCharts({ points, dateFrom, dateTo, periodLabel
   const subtitle = periodLabel ?? `${format(parseISO(dateFrom), 'd MMM', { locale: ru })} — ${format(parseISO(dateTo), 'd MMM yyyy', { locale: ru })}`
 
   return (
-    <section className="grid-2">
-      <TrendLineChart
-        title="Доходы"
-        subtitle={subtitle}
-        dataKey="income"
-        color="#2dd4bf"
-        rows={rows}
-        rangeDays={rangeDays}
-      />
-      <TrendLineChart
-        title="Расходы"
-        subtitle={subtitle}
-        dataKey="expenses"
-        color="#ef4761"
-        rows={rows}
-        rangeDays={rangeDays}
-      />
-    </section>
+    <>
+      <section className="grid-2">
+        <TrendLineChart
+          title="Доходы"
+          subtitle={subtitle}
+          dataKey="income"
+          color="#2dd4bf"
+          rows={rows}
+          rangeDays={rangeDays}
+          onSelectDay={setSelectedDay}
+        />
+        <TrendLineChart
+          title="Расходы"
+          subtitle={subtitle}
+          dataKey="expenses"
+          color="#ef4761"
+          rows={rows}
+          rangeDays={rangeDays}
+          onSelectDay={setSelectedDay}
+        />
+      </section>
+
+      {selectedDay && (
+        <DayTransactionsModal
+          selection={selectedDay}
+          onClose={() => setSelectedDay(null)}
+        />
+      )}
+    </>
   )
 }
