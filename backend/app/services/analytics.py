@@ -29,6 +29,8 @@ from app.schemas.analytics import (
 from app.services.goal import GoalService
 
 INVESTMENT_EXPENSE_CATEGORY_NAME = "Инвестиции"
+# Переводы людям — не магазины, на карте трат по мерчантам только зашумляют картину
+PERSONAL_TRANSFER_EXPENSE_CATEGORY_NAME = "Переводы людям"
 
 
 class AnalyticsService:
@@ -42,16 +44,21 @@ class AnalyticsService:
         self.goal_repo = GoalRepository(session)
         self.goal_service = GoalService(session)
 
-    async def _investment_expense_category_ids(self, user_id: UUID) -> list[UUID]:
+    async def _expense_category_ids_by_name(self, user_id: UUID, name: str) -> list[UUID]:
         result = await self.session.execute(
             select(Category.id).where(
                 Category.user_id == user_id,
-                Category.name == INVESTMENT_EXPENSE_CATEGORY_NAME,
+                Category.name == name,
                 Category.type == CategoryType.EXPENSE,
                 Category.deleted_at.is_(None),
             )
         )
         return list(result.scalars().all())
+
+    async def _investment_expense_category_ids(self, user_id: UUID) -> list[UUID]:
+        return await self._expense_category_ids_by_name(
+            user_id, INVESTMENT_EXPENSE_CATEGORY_NAME
+        )
 
     def _exclude_investment_expense_clause(
         self, category_ids: list[UUID]
@@ -150,9 +157,12 @@ class AnalyticsService:
     ) -> MerchantsResponse:
         date_to = date_to or date.today()
         date_from = date_from or date_to - timedelta(days=30)
-        investment_ids = (
-            await self._investment_expense_category_ids(user_id) if exclude_investments else []
+        # Переводы людям исключены всегда: карта строится по магазинам
+        excluded_ids = await self._expense_category_ids_by_name(
+            user_id, PERSONAL_TRANSFER_EXPENSE_CATEGORY_NAME
         )
+        if exclude_investments:
+            excluded_ids += await self._investment_expense_category_ids(user_id)
         merchant_filters = [
             Transaction.user_id == user_id,
             Transaction.type == TransactionType.EXPENSE,
@@ -162,8 +172,8 @@ class AnalyticsService:
             Transaction.transaction_date <= date_to,
             Category.deleted_at.is_(None),
         ]
-        if investment_ids:
-            merchant_filters.append(Category.id.notin_(investment_ids))
+        if excluded_ids:
+            merchant_filters.append(Category.id.notin_(excluded_ids))
         result = await self.session.execute(
             select(
                 Category.id,

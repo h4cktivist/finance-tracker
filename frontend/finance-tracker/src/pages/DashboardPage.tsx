@@ -200,7 +200,9 @@ export function DashboardPage() {
         <div className="card-header">
           <div>
             <h2>Карта магазинов</h2>
-            <p className="card-subtitle">Размер блока — сумма трат, цвет — категория</p>
+            <p className="card-subtitle">
+              Размер блока — сумма трат, цвет — категория. Переводы людям не учитываются
+            </p>
           </div>
         </div>
         {!mch || mch.categories.length === 0 ? (
