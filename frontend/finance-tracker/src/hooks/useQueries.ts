@@ -51,8 +51,11 @@ import type {
   Tag,
   TagCreate,
   TagUpdate,
+  TemplateApply,
+  TemplateUpdate,
   Transaction,
   TransactionCreate,
+  TransactionTemplate,
   TransactionUpdate,
 } from '@/lib/types'
 
@@ -197,23 +200,25 @@ export function useTransactions(filters: TransactionsFilters = {}) {
   })
 }
 
+function invalidateAfterTransactionCreate(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['transactions'] })
+  qc.invalidateQueries({ queryKey: accountsKey })
+  qc.invalidateQueries({ queryKey: ['dashboard'] })
+  qc.invalidateQueries({ queryKey: ['goals'] })
+  qc.invalidateQueries({ queryKey: ['statistics'] })
+  qc.invalidateQueries({ queryKey: ['merchants'] })
+  qc.invalidateQueries({ queryKey: ['heatmap'] })
+  qc.invalidateQueries({ queryKey: ['ratios'] })
+  qc.invalidateQueries({ queryKey: ['budgets'] })
+  qc.invalidateQueries({ queryKey: ['cashback'] })
+}
+
 export function useCreateTransaction() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: TransactionCreate) =>
       api.post<Transaction | Transaction[]>('/transactions', data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['transactions'] })
-      qc.invalidateQueries({ queryKey: accountsKey })
-      qc.invalidateQueries({ queryKey: ['dashboard'] })
-      qc.invalidateQueries({ queryKey: ['goals'] })
-      qc.invalidateQueries({ queryKey: ['statistics'] })
-      qc.invalidateQueries({ queryKey: ['merchants'] })
-      qc.invalidateQueries({ queryKey: ['heatmap'] })
-      qc.invalidateQueries({ queryKey: ['ratios'] })
-      qc.invalidateQueries({ queryKey: ['budgets'] })
-      qc.invalidateQueries({ queryKey: ['cashback'] })
-    },
+    onSuccess: () => invalidateAfterTransactionCreate(qc),
   })
 }
 
@@ -281,6 +286,51 @@ export function useCorrectTransaction() {
       qc.invalidateQueries({ queryKey: ['dashboard'] })
       qc.invalidateQueries({ queryKey: ['goals'] })
     },
+  })
+}
+
+// === Transaction templates ===
+export const templatesKey = ['templates'] as const
+
+export function useTemplates() {
+  return useQuery({
+    queryKey: templatesKey,
+    queryFn: () => api.get<TransactionTemplate[]>('/templates'),
+  })
+}
+
+export function useCreateTemplateFromTransaction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ transactionId, name }: { transactionId: string; name?: string }) =>
+      api.post<TransactionTemplate>(`/templates/from-transaction/${transactionId}`, { name }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: templatesKey }),
+  })
+}
+
+export function useUpdateTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: TemplateUpdate }) =>
+      api.patch<TransactionTemplate>(`/templates/${id}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: templatesKey }),
+  })
+}
+
+export function useDeleteTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<null>(`/templates/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: templatesKey }),
+  })
+}
+
+export function useApplyTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data?: TemplateApply }) =>
+      api.post<Transaction | Transaction[]>(`/templates/${id}/apply`, data ?? {}),
+    onSuccess: () => invalidateAfterTransactionCreate(qc),
   })
 }
 

@@ -7,6 +7,7 @@ import {
   ArrowDownRight,
   ArrowLeftRight,
   ArrowUpRight,
+  BookmarkPlus,
   ChevronLeft,
   ChevronRight,
   Filter,
@@ -24,6 +25,7 @@ import {
   useCards,
   useCategories,
   useCorrectTransaction,
+  useCreateTemplateFromTransaction,
   useCreateTransaction,
   useDeleteTransaction,
   useTags,
@@ -41,6 +43,7 @@ import { Modal } from '@/components/Modal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
 import { TransactionDetailSheet } from '@/components/TransactionDetailSheet'
+import { TemplateFormModal, TemplatesPanel } from '@/components/TransactionTemplates'
 import { formatDate, formatMoney, todayIso } from '@/lib/format'
 import { handleApiError } from '@/lib/errors'
 
@@ -77,6 +80,7 @@ export function TransactionsPage() {
   const [correcting, setCorrecting] = useState<Transaction | null>(null)
   const [deleting, setDeleting] = useState<Transaction | null>(null)
   const [detailTx, setDetailTx] = useState<Transaction | null>(null)
+  const [templateFrom, setTemplateFrom] = useState<Transaction | null>(null)
 
   const queryFilters = useMemo(
     () => ({ ...filters, search: search || undefined, page, page_size: 20 }),
@@ -93,6 +97,7 @@ export function TransactionsPage() {
   const update = useUpdateTransaction()
   const correct = useCorrectTransaction()
   const remove = useDeleteTransaction()
+  const createTemplate = useCreateTemplateFromTransaction()
 
   const accountMap = useMemo(
     () => Object.fromEntries((accounts.data ?? []).map((a) => [a.id, a])),
@@ -163,6 +168,8 @@ export function TransactionsPage() {
           <Plus size={16} /> Новая операция
         </button>
       </div>
+
+      <TemplatesPanel accountMap={accountMap} categoryMap={categoryMap} />
 
       {showFilters && (
         <div className="card">
@@ -345,6 +352,9 @@ export function TransactionsPage() {
                           <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setEditing(t)} title="Редактировать">
                             <Pencil size={14} />
                           </button>
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setTemplateFrom(t)} title="В шаблоны">
+                            <BookmarkPlus size={14} />
+                          </button>
                           <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setCorrecting(t)} title="Исправление">
                             <RotateCcw size={14} />
                           </button>
@@ -449,8 +459,26 @@ export function TransactionsPage() {
         onEdit={setEditing}
         onCorrect={setCorrecting}
         onDelete={setDeleting}
+        onSaveTemplate={setTemplateFrom}
         onCashbackUpdated={(updated) => setDetailTx(updated)}
       />
+
+      {templateFrom && <TemplateFormModal
+        title="Сохранить как шаблон"
+        subtitle="По шаблону одним нажатием создаётся такая же операция с сегодняшней датой."
+        initialName={templateFrom.description || templateFrom.merchant_name || typeLabel(templateFrom.type)}
+        submitting={createTemplate.isPending}
+        onClose={() => setTemplateFrom(null)}
+        onSubmit={async ({ name }) => {
+          try {
+            await createTemplate.mutateAsync({ transactionId: templateFrom.id, name })
+            toast.success('Шаблон сохранён')
+            setTemplateFrom(null)
+          } catch (e) {
+            handleApiError(e)
+          }
+        }}
+      />}
 
       <ConfirmDialog
         open={!!deleting}
@@ -473,6 +501,10 @@ function renderCategoryIcon(cat: Category) {
     return <span className="color-swatch" style={{ background: cat.color, margin: 0, width: 12, height: 12 }} />
   }
   return <Folder size={14} />
+}
+
+function typeLabel(type: TransactionType) {
+  return type === 'income' ? 'Доход' : type === 'expense' ? 'Расход' : 'Перевод'
 }
 
 function renderTypeBadge(type: TransactionType) {

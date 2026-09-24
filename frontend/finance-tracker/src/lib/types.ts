@@ -257,6 +257,32 @@ export type RecurringUpdate = {
   amount?: string | number
 }
 
+export type TransactionTemplate = {
+  id: string
+  name: string
+  account_id: string
+  target_account_id: string | null
+  category_id: string | null
+  card_id: string | null
+  type: TransactionType
+  amount: string
+  description: string | null
+  merchant_name: string | null
+  notes: string | null
+  tag_ids: string[]
+  created_at: string
+}
+
+export type TemplateUpdate = {
+  name?: string
+  amount?: string | number
+}
+
+export type TemplateApply = {
+  transaction_date?: string
+  amount?: string | number
+}
+
 export type Card = {
   id: string
   user_id: string

@@ -4,6 +4,7 @@ import {
   ArrowDownRight,
   ArrowLeftRight,
   ArrowUpRight,
+  BookmarkPlus,
   Pencil,
   RotateCcw,
   Trash2,
@@ -62,6 +63,7 @@ type Props = {
   onEdit: (t: Transaction) => void
   onCorrect: (t: Transaction) => void
   onDelete: (t: Transaction) => void
+  onSaveTemplate?: (t: Transaction) => void
   onCashbackUpdated?: (t: Transaction) => void
 }
 
@@ -199,6 +201,7 @@ export function TransactionDetailSheet({
   onEdit,
   onCorrect,
   onDelete,
+  onSaveTemplate,
   onCashbackUpdated,
 }: Props) {
   const { data: cards = [] } = useCards()
@@ -327,6 +330,18 @@ export function TransactionDetailSheet({
         >
           <Pencil size={14} /> Редактировать
         </button>
+        {onSaveTemplate && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              onClose()
+              onSaveTemplate(localTx)
+            }}
+          >
+            <BookmarkPlus size={14} /> В шаблоны
+          </button>
+        )}
         <button
           type="button"
           className="btn btn-ghost"

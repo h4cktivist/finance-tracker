@@ -12,6 +12,7 @@ from app.models.recurring_execution import RecurringExecution
 from app.models.refresh_token import RefreshToken
 from app.models.tag import Tag, TransactionTag
 from app.models.transaction import Transaction
+from app.models.transaction_template import TransactionTemplate
 from app.models.user import User
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     "Tag",
     "TransactionTag",
     "Transaction",
+    "TransactionTemplate",
     "LedgerEntry",
     "Budget",
     "RecurringTransaction",

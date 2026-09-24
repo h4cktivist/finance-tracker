@@ -836,6 +836,120 @@ p { margin: 0; }
   justify-content: center;
 }
 
+/* === Transaction templates === */
+.templates-panel {
+  padding: 0;
+}
+.templates-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.templates-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.templates-panel-chevron {
+  margin-left: auto;
+  transition: transform 0.15s ease;
+}
+.templates-panel-body {
+  padding: 0 20px 16px;
+}
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+.template-tile {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(11, 16, 32, 0.4);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.template-tile:hover {
+  border-color: var(--border-strong);
+  background: var(--primary-soft);
+}
+.template-tile.is-busy {
+  opacity: 0.6;
+}
+.template-tile-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 10px 4px 10px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.template-tile-main:disabled {
+  cursor: wait;
+}
+.template-tile-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(120, 134, 200, 0.12);
+  color: var(--text-muted);
+}
+.template-tile-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.template-tile-name,
+.template-tile-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.template-tile-name {
+  font-weight: 500;
+}
+.template-tile-meta {
+  font-size: 12px;
+}
+.template-tile-amount {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.template-tile-actions {
+  display: flex;
+  padding-right: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.template-tile:hover .template-tile-actions,
+.template-tile:focus-within .template-tile-actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  .template-tile-actions {
+    opacity: 1;
+  }
+}
+
 .modal-header {
   align-items: flex-start;
   gap: 8px;
