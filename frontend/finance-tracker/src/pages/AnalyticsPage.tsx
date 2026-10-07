@@ -77,6 +77,21 @@ export function AnalyticsPage() {
 
       <section className="kpi-grid">
         <div className="kpi">
+          <span className="label">Доходы за период</span>
+          <span className="value mono value-positive">
+            {formatMoney(stats.data?.total_income ?? 0)}
+          </span>
+        </div>
+        <div className="kpi">
+          <span className="label">Расходы за период</span>
+          <span className="value mono value-negative">
+            {formatMoney(stats.data?.total_expenses ?? 0)}
+          </span>
+        </div>
+      </section>
+
+      <section className="kpi-grid">
+        <div className="kpi">
           <span className="label">Денежный поток</span>
           <span className={`value mono ${Number(stats.data?.cashflow ?? 0) >= 0 ? 'value-positive' : 'value-negative'}`}>
             {formatMoney(stats.data?.cashflow ?? 0)}

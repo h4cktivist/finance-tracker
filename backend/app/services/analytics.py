@@ -140,6 +140,8 @@ class AnalyticsService:
         return StatisticsResponse(
             top_expense_categories=top_expense,
             top_income_categories=top_income,
+            total_income=income,
+            total_expenses=expenses,
             cashflow=income - expenses,
             average_daily_spending=expenses / days if days else Decimal("0"),
             average_monthly_income=income / Decimal(str(months)),

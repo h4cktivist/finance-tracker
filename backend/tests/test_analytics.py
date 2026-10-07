@@ -69,3 +69,48 @@ async def test_exclude_investments_from_statistics(client: AsyncClient):
     expense_names = [c["category_name"] for c in filtered_stats["top_expense_categories"]]
     assert "Инвестиции" not in expense_names
     assert "Еда" in expense_names
+
+
+@pytest.mark.asyncio
+async def test_statistics_totals_for_period(client: AsyncClient):
+    headers = await _auth_headers(client, "analytics-totals@example.com")
+    account_id = (
+        await client.post(
+            "/api/v1/accounts",
+            json={"name": "Wallet", "type": "cash", "initial_balance": "0"},
+            headers=headers,
+        )
+    ).json()["data"]["id"]
+    rows = (
+        ("income", "1000", "2026-03-05"),
+        ("income", "250.50", "2026-03-20"),
+        ("expense", "300", "2026-03-10"),
+        ("expense", "45.25", "2026-03-31"),
+        # вне периода — не учитываются
+        ("income", "9999", "2026-02-28"),
+        ("expense", "777", "2026-04-01"),
+    )
+    for tx_type, amount, tx_date in rows:
+        resp = await client.post(
+            "/api/v1/transactions",
+            json={
+                "account_id": account_id,
+                "type": tx_type,
+                "amount": amount,
+                "transaction_date": tx_date,
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+
+    stats = (
+        await client.get(
+            "/api/v1/analytics/statistics",
+            headers=headers,
+            params={"date_from": "2026-03-01", "date_to": "2026-03-31"},
+        )
+    ).json()["data"]
+
+    assert Decimal(str(stats["total_income"])) == Decimal("1250.50")
+    assert Decimal(str(stats["total_expenses"])) == Decimal("345.25")
+    assert Decimal(str(stats["cashflow"])) == Decimal("905.25")

@@ -22,6 +22,8 @@ class CategoryStat(BaseModel):
 class StatisticsResponse(BaseModel):
     top_expense_categories: list[CategoryStat]
     top_income_categories: list[CategoryStat]
+    total_income: Decimal
+    total_expenses: Decimal
     cashflow: Decimal
     average_daily_spending: Decimal
     average_monthly_income: Decimal

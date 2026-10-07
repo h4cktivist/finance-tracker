@@ -456,6 +456,8 @@ export type CategoryStat = {
 export type Statistics = {
   top_expense_categories: CategoryStat[]
   top_income_categories: CategoryStat[]
+  total_income: string
+  total_expenses: string
   cashflow: string
   average_daily_spending: string
   average_monthly_income: string
