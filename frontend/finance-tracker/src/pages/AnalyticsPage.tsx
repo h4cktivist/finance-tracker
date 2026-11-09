@@ -15,11 +15,12 @@ import {
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { ExcludeInvestmentsToggle } from '@/components/ExcludeInvestmentsToggle'
 import { useAnalyticsPreferences } from '@/context/AnalyticsPreferencesContext'
-import { useForecast, useHeatmap, useRatios, useStatistics, useTrends } from '@/hooks/useQueries'
+import { useForecast, useHeatmap, useMerchants, useRatios, useStatistics, useTrends } from '@/hooks/useQueries'
 import { formatMoney, toIsoDate } from '@/lib/format'
 import type { Forecast } from '@/lib/types'
 import { Heatmap } from '@/components/Heatmap'
 import { IncomeExpenseTrendCharts } from '@/components/IncomeExpenseTrendCharts'
+import { MerchantTreemap } from '@/components/MerchantTreemap'
 import { categoryChartColor } from '@/lib/categoryColor'
 
 function defaultRange(daysBack: number) {
@@ -35,6 +36,7 @@ export function AnalyticsPage() {
   const [expenseListOpen, setExpenseListOpen] = useState(false)
   const stats = useStatistics(range.from, range.to, excludeInvestments)
   const heat = useHeatmap(range.from, range.to, excludeInvestments)
+  const merchants = useMerchants(range.from, range.to, excludeInvestments)
   const trends = useTrends(range.from, range.to, excludeInvestments)
   const ratios = useRatios(range.from, range.to, excludeInvestments)
   const forecast = useForecast(excludeInvestments)
@@ -221,6 +223,22 @@ export function AnalyticsPage() {
           <div className="empty"><p>Нет данных</p></div>
         ) : (
           <Heatmap days={heat.data.days} dateFrom={range.from} dateTo={range.to} />
+        )}
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <h2>Карта магазинов</h2>
+            <p className="card-subtitle">
+              Размер блока — сумма трат, цвет — категория. Переводы людям не учитываются
+            </p>
+          </div>
+        </div>
+        {!merchants.data || merchants.data.categories.length === 0 ? (
+          <div className="empty"><p>Нет данных</p></div>
+        ) : (
+          <MerchantTreemap categories={merchants.data.categories} />
         )}
       </div>
 
